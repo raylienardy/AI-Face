@@ -1,0 +1,80 @@
+# ============================================
+# FaceAI - .gitignore
+# Milestone 1
+# ============================================
+
+# -----------------------
+# Python
+# -----------------------
+__pycache__/
+*.py[cod]
+*$py.class
+
+# -----------------------
+# Virtual Environment
+# -----------------------
+.venv/
+venv/
+env/
+
+# -----------------------
+# Environment Variables
+# -----------------------
+.env
+
+# -----------------------
+# IDE
+# -----------------------
+.vscode/
+.idea/
+
+# -----------------------
+# Operating System
+# -----------------------
+.DS_Store
+Thumbs.db
+
+# -----------------------
+# Python Test & Cache
+# -----------------------
+.pytest_cache/
+.mypy_cache/
+
+# -----------------------
+# Logs
+# -----------------------
+*.log
+
+# -----------------------
+# Build
+# -----------------------
+build/
+dist/
+*.egg-info/
+
+# -----------------------
+# Dataset
+# -----------------------
+datasets/
+
+# Keep folder structure
+!datasets/.gitkeep
+
+# -----------------------
+# Model (Future)
+# -----------------------
+models/
+
+# Keep folder structure
+!models/.gitkeep
+
+# -----------------------
+# Temporary Files
+# -----------------------
+*.tmp
+*.temp
+
+
+pengingatds.txt
+pengingatgpt.txt
+SDD.txt
