@@ -5,14 +5,14 @@
 
 /* Custom Properties (CSS Variables) */
 :root {
-  --color-bg: #0f172a; /* Slate 900 */
-  --color-surface: #1e293b; /* Slate 800 */
-  --color-text: #f8fafc; /* Slate 50 */
-  --color-text-muted: #94a3b8; /* Slate 400 */
-  --color-primary: #3b82f6; /* Blue 500 */
-  --color-success: #22c55e; /* Green 500 */
-  --color-error: #ef4444; /* Red 500 */
-  --color-inactive: #475569; /* Slate 600 */
+  --color-bg: #0f172a;
+  --color-surface: #1e293b;
+  --color-text: #f8fafc;
+  --color-text-muted: #94a3b8;
+  --color-primary: #3b82f6;
+  --color-success: #22c55e;
+  --color-error: #ef4444;
+  --color-inactive: #475569;
   --border-radius: 12px;
   --spacing: 1rem;
 }
@@ -48,13 +48,11 @@ body {
   text-align: center;
   margin-bottom: 2rem;
 }
-
 .header__title {
   font-size: 2rem;
   font-weight: 700;
   letter-spacing: -0.5px;
 }
-
 .header__version {
   font-size: 0.9rem;
   color: var(--color-text-muted);
@@ -83,19 +81,16 @@ body {
   justify-content: space-between;
   align-items: center;
 }
-
 .status-panel__title {
   font-size: 1rem;
   font-weight: 600;
 }
-
 .status-panel__value {
   font-weight: 600;
   font-size: 0.9rem;
   padding: 0.25rem 0.8rem;
   border-radius: 999px;
 }
-
 .status-panel__value--disconnected {
   background: rgba(239, 68, 68, 0.15);
   color: #fca5a5;
@@ -105,29 +100,26 @@ body {
 .camera-preview {
   position: relative;
   width: 100%;
-  background: #000; /* fallback */
+  background: #000;
   border-radius: var(--border-radius);
   overflow: hidden;
   border: 2px dashed var(--color-inactive);
 }
-
-/* Maintain aspect ratio based on video stream */
+/* Fallback aspect ratio before video loads */
 .camera-preview::before {
   content: "";
   display: block;
-  padding-top: 56.25%; /* 16:9 placeholder, akan ditimpa oleh video sebenarnya */
+  padding-top: 56.25%;
 }
-
 .camera-preview video {
   position: absolute;
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
-  object-fit: contain;
+  object-fit: cover; /* FaceAI is face-centric: crop background, maximize face area */
   background: #000;
 }
-
 .camera-preview__placeholder {
   position: absolute;
   top: 0;
@@ -140,12 +132,10 @@ body {
   z-index: 2;
   transition: opacity 0.3s;
 }
-
 .camera-preview__placeholder.hidden {
   opacity: 0;
   pointer-events: none;
 }
-
 .camera-preview__text {
   color: var(--color-text-muted);
   font-size: 1.1rem;
@@ -157,18 +147,15 @@ body {
   justify-content: center;
   gap: 2rem;
 }
-
 .system-status__item {
   display: flex;
   align-items: center;
   gap: 0.5rem;
 }
-
 .system-status__label {
   font-size: 0.9rem;
   color: var(--color-text-muted);
 }
-
 .system-status__dot {
   width: 12px;
   height: 12px;
@@ -177,11 +164,9 @@ body {
   display: inline-block;
   transition: background 0.3s;
 }
-
 .system-status__dot--inactive {
   background: var(--color-inactive);
 }
-
 .system-status__dot--active {
   background: var(--color-success);
 }
@@ -198,16 +183,13 @@ body {
     opacity 0.2s,
     transform 0.1s;
 }
-
 .btn:active {
   transform: scale(0.98);
 }
-
 .btn--primary {
   background: var(--color-primary);
   color: white;
 }
-
 .btn:disabled {
   opacity: 0.4;
   cursor: not-allowed;
@@ -219,6 +201,6 @@ body {
   color: var(--color-error);
   text-align: center;
   font-size: 0.9rem;
-  min-height: 1.2em; /* tetap jaga layout */
+  min-height: 1.2em;
   margin-top: -0.5rem;
 }
