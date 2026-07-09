@@ -100,11 +100,11 @@ body {
   color: #fca5a5;
 }
 
-/* Camera Preview Placeholder */
+/* Camera Preview Placeholder - flexible height for different webcam ratios */
 .camera-preview {
   background: var(--color-surface);
   border-radius: var(--border-radius);
-  aspect-ratio: 4 / 3;
+  min-height: 250px;
   display: flex;
   align-items: center;
   justify-content: center;

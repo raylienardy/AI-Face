@@ -6,22 +6,10 @@
  * It will be filled with logic in future milestones.
  */
 
-(function () {
-  "use strict";
+document.addEventListener("DOMContentLoaded", function () {
+  console.log("FaceAI frontend initialized (v0.1)");
 
-  // DOM Elements
+  // DOM elements reference (ready for future use)
   const startCameraBtn = document.getElementById("start-camera-btn");
-
-  // Placeholder for future event listeners
-  function init() {
-    console.log("FaceAI frontend initialized (v0.1)");
-    // No functionality yet — button remains disabled.
-  }
-
-  // Run initialization when DOM is ready
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", init);
-  } else {
-    init();
-  }
-})();
+  // Button remains disabled until camera functionality is added.
+});
