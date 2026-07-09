@@ -1,0 +1,464 @@
+# Software Design Document (SDD)
+
+## FaceAI
+
+Version: 0.1
+Status: Draft (Approved by Founder)
+
+---
+
+# 1. Project Overview
+
+## Project Name
+
+FaceAI
+
+## Project Type
+
+AI-powered Face Intelligence Platform
+
+## Development Stage
+
+Prototype (Version 0.1)
+
+## Long-Term Vision
+
+FaceAI akan menjadi platform analisis wajah berbasis AI yang mampu berkembang menjadi:
+
+* Face Capture
+* Face Recognition
+* Face Analysis
+* Face Rating
+* Face Recommendation
+* Hairstyle Recommendation
+* Makeup Recommendation
+* Virtual Try-On
+* Personal Beauty Assistant
+
+Versi 0.1 hanya membangun pondasi.
+
+---
+
+# 2. Problem Statement
+
+Saat ini banyak aplikasi AI langsung mencoba memberikan analisis wajah atau rekomendasi makeup.
+
+Namun kualitas analisis sangat bergantung pada kualitas data yang masuk.
+
+Karena itu FaceAI dibangun dari bawah:
+
+Capture → Dataset → Recognition → Analysis → Recommendation.
+
+---
+
+# 3. MVP Scope (Version 0.1)
+
+Versi pertama hanya memiliki tujuan berikut:
+
+* Mengakses kamera laptop.
+* Mendeteksi keberadaan wajah.
+* Memastikan kualitas wajah memenuhi syarat.
+* Mengambil foto secara otomatis.
+* Menyimpan foto.
+* Memberikan ID unik.
+* Menyimpan metadata.
+* Membangun dataset wajah pribadi.
+
+Belum ada:
+
+* Rating wajah.
+* Makeup AI.
+* Gender prediction.
+* Beauty score.
+* Face recommendation.
+* Hairstyle recommendation.
+
+---
+
+# 4. Functional Requirements
+
+FR-01
+
+User dapat membuka aplikasi melalui browser.
+
+FR-02
+
+User dapat mengaktifkan kamera.
+
+FR-03
+
+Sistem mendeteksi apakah terdapat wajah.
+
+FR-04
+
+Sistem hanya menerima satu wajah.
+
+FR-05
+
+Sistem memastikan wajah cukup jelas.
+
+FR-06
+
+Jika syarat terpenuhi maka countdown dimulai.
+
+FR-07
+
+Jika countdown selesai maka sistem mengambil foto.
+
+FR-08
+
+User dapat menerima atau mengulang hasil foto.
+
+FR-09
+
+Jika disimpan maka sistem membuat ID otomatis.
+
+FR-10
+
+Foto dan metadata disimpan dalam dataset.
+
+---
+
+# 5. Non Functional Requirements
+
+* Modular
+* Mudah dipelihara
+* Mudah dikembangkan
+* Cepat
+* Dokumentasi lengkap
+* Struktur folder konsisten
+* Kode mengikuti PEP8
+* Menggunakan Git
+
+---
+
+# 6. User Flow
+
+Start
+
+↓
+
+Open Website
+
+↓
+
+Start Camera
+
+↓
+
+Detect Face
+
+↓
+
+Validate Face
+
+↓
+
+Countdown
+
+↓
+
+Capture
+
+↓
+
+Preview
+
+↓
+
+Retake atau Save
+
+↓
+
+Generate ID
+
+↓
+
+Save Dataset
+
+↓
+
+Finish
+
+---
+
+# 7. Face Validation Rules
+
+Sebelum capture dilakukan, sistem harus memastikan:
+
+* hanya satu wajah
+* wajah berada di tengah frame
+* pencahayaan cukup
+* gambar tidak blur
+* posisi wajah relatif menghadap kamera
+* ukuran wajah cukup besar dalam frame
+
+Jika salah satu syarat gagal, countdown dibatalkan.
+
+---
+
+# 8. Dataset Structure
+
+dataset/
+
+person_000001/
+
+capture_001.jpg
+
+capture_002.jpg
+
+capture_003.jpg
+
+metadata.json
+
+person_000002/
+
+capture_001.jpg
+
+metadata.json
+
+---
+
+# 9. Metadata
+
+Setiap orang memiliki metadata.
+
+Contoh informasi:
+
+* Person ID
+* Tanggal registrasi
+* Jumlah capture
+* Kamera yang digunakan
+* Resolusi
+* Kualitas capture
+* Catatan teknis (opsional)
+
+---
+
+# 10. System Architecture
+
+Browser
+
+↓
+
+Frontend
+
+↓
+
+FastAPI
+
+↓
+
+Camera Service
+
+↓
+
+Face Detection Service
+
+↓
+
+Face Validation Service
+
+↓
+
+Capture Service
+
+↓
+
+Dataset Service
+
+↓
+
+Storage
+
+Setiap service berdiri sendiri sehingga mudah dikembangkan.
+
+---
+
+# 11. Folder Structure
+
+FaceAI/
+
+backend/
+
+frontend/
+
+datasets/
+
+models/
+
+database/
+
+config/
+
+docs/
+
+tests/
+
+logs/
+
+scripts/
+
+assets/
+
+README.md
+
+requirements.txt
+
+.gitignore
+
+---
+
+# 12. Technology Stack
+
+Backend
+
+Python
+
+FastAPI
+
+Computer Vision
+
+OpenCV
+
+Model AI
+
+InsightFace (pretrained)
+
+Database
+
+SQLite
+
+Frontend
+
+HTML
+
+CSS
+
+JavaScript
+
+Version Control
+
+Git
+
+Repository
+
+GitHub
+
+---
+
+# 13. Milestone Roadmap
+
+Milestone 1
+
+Project Initialization
+
+Milestone 2
+
+Frontend UI
+
+Milestone 3
+
+Camera
+
+Milestone 4
+
+Face Detection
+
+Milestone 5
+
+Face Validation
+
+Milestone 6
+
+Face Capture
+
+Milestone 7
+
+Dataset Storage
+
+Milestone 8
+
+Face Recognition
+
+Milestone 9
+
+Face Rating
+
+Milestone 10
+
+Face Recommendation
+
+Milestone 11
+
+AI Makeup
+
+---
+
+# 14. Engineering Rules
+
+* Satu milestone dikerjakan sampai selesai sebelum lanjut.
+* Tidak menambah fitur di luar milestone.
+* Setiap milestone memiliki dokumentasi.
+* Setiap milestone memiliki pengujian.
+* Setiap milestone memiliki Git Commit.
+* Tidak melakukan refactor besar tanpa alasan yang jelas.
+
+---
+
+# 15. Success Criteria
+
+Version 0.1 dianggap selesai apabila:
+
+* Kamera dapat digunakan.
+* Wajah dapat dideteksi.
+* Validasi kualitas wajah berjalan.
+* Countdown berjalan.
+* Capture berhasil.
+* Foto tersimpan.
+* ID unik dibuat.
+* Metadata tersimpan.
+* Dataset dapat digunakan untuk tahap berikutnya.
+
+---
+
+# 16. Future Versions
+
+v0.2
+
+Face Recognition
+
+v0.3
+
+Face Rating
+
+v0.4
+
+Face Recommendation
+
+v0.5
+
+Hairstyle Recommendation
+
+v0.6
+
+Makeup Recommendation
+
+v1.0
+
+Face Intelligence Platform
+
+---
+
+# 17. Guiding Principle
+
+Seluruh keputusan teknis harus mendukung tujuan jangka panjang.
+
+Jika terdapat dua solusi yang sama-sama benar, pilih solusi yang:
+
+* lebih sederhana,
+* lebih modular,
+* lebih mudah dipelihara,
+* lebih mudah dikembangkan.
+
+Kecepatan implementasi tidak boleh mengorbankan kualitas arsitektur.
