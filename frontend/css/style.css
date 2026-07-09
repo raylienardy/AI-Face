@@ -104,7 +104,8 @@ body {
 .camera-preview {
   background: var(--color-surface);
   border-radius: var(--border-radius);
-  min-height: 250px;
+  height: 420px;
+  overflow: hidden;
   display: flex;
   align-items: center;
   justify-content: center;
