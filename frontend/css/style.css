@@ -1,0 +1,180 @@
+/* ===================================
+   FaceAI Frontend Styles
+   Version: 0.1
+   =================================== */
+
+/* Custom Properties (CSS Variables) */
+:root {
+  --color-bg: #0f172a; /* Slate 900 */
+  --color-surface: #1e293b; /* Slate 800 */
+  --color-text: #f8fafc; /* Slate 50 */
+  --color-text-muted: #94a3b8; /* Slate 400 */
+  --color-primary: #3b82f6; /* Blue 500 */
+  --color-success: #22c55e; /* Green 500 */
+  --color-inactive: #475569; /* Slate 600 */
+  --border-radius: 12px;
+  --spacing: 1rem;
+}
+
+/* Base Reset */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family:
+    system-ui,
+    -apple-system,
+    "Segoe UI",
+    Roboto,
+    sans-serif;
+  background-color: var(--color-bg);
+  color: var(--color-text);
+  line-height: 1.5;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 2rem 1rem;
+}
+
+/* Header */
+.header {
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.header__title {
+  font-size: 2rem;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+}
+
+.header__version {
+  font-size: 0.9rem;
+  color: var(--color-text-muted);
+  background: var(--color-surface);
+  padding: 0.2rem 0.8rem;
+  border-radius: 999px;
+  display: inline-block;
+  margin-top: 0.3rem;
+}
+
+/* Main Container */
+.main {
+  width: 100%;
+  max-width: 640px;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+/* Status Panel */
+.status-panel {
+  background: var(--color-surface);
+  border-radius: var(--border-radius);
+  padding: 1rem 1.2rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.status-panel__title {
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.status-panel__value {
+  font-weight: 600;
+  font-size: 0.9rem;
+  padding: 0.25rem 0.8rem;
+  border-radius: 999px;
+}
+
+.status-panel__value--disconnected {
+  background: rgba(239, 68, 68, 0.15); /* Red tint */
+  color: #fca5a5;
+}
+
+/* Camera Preview Placeholder */
+.camera-preview {
+  background: var(--color-surface);
+  border-radius: var(--border-radius);
+  aspect-ratio: 4 / 3;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px dashed var(--color-inactive);
+}
+
+.camera-preview__placeholder {
+  text-align: center;
+}
+
+.camera-preview__text {
+  color: var(--color-text-muted);
+  font-size: 1.1rem;
+}
+
+/* System Status */
+.system-status {
+  display: flex;
+  justify-content: center;
+  gap: 2rem;
+}
+
+.system-status__item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.system-status__label {
+  font-size: 0.9rem;
+  color: var(--color-text-muted);
+}
+
+.system-status__dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--color-inactive);
+  display: inline-block;
+  transition: background 0.3s;
+}
+
+.system-status__dot--inactive {
+  background: var(--color-inactive);
+}
+
+/* Button */
+.btn {
+  padding: 0.8rem 2rem;
+  font-size: 1rem;
+  font-weight: 600;
+  border: none;
+  border-radius: 999px;
+  cursor: pointer;
+  transition:
+    opacity 0.2s,
+    transform 0.1s;
+}
+
+.btn:active {
+  transform: scale(0.98);
+}
+
+.btn--primary {
+  background: var(--color-primary);
+  color: white;
+}
+
+.btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  transform: none;
+}
