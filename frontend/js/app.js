@@ -1,8 +1,8 @@
 /**
  * FaceAI Application Entry Point
- * Version: 0.1 – Milestone 3
+ * Version: 0.1 – Milestone 3.5
  *
- * Initializes modules and wires UI events to camera logic.
+ * Initializes app, wires events.
  */
 "use strict";
 
@@ -11,18 +11,19 @@
   // Initialization
   // ==========================================
   function init() {
-    // Cache DOM for button listener (the rest is handled by ui.js)
+    // Pastikan state awal
+    FaceAI.state.set("IDLE");
+
     const startBtn = document.getElementById("start-camera-btn");
     startBtn.addEventListener("click", onStartClick);
 
-    console.log("FaceAI frontend initialized (v0.1 – Milestone 3)");
+    console.log("FaceAI frontend initialized (v0.1 – Milestone 3.5)");
   }
 
   // ==========================================
   // Event Handlers
   // ==========================================
   async function onStartClick() {
-    // Guard: prevent action if camera already active or starting
     if (FaceAI.camera.isActive() || FaceAI.camera.isStarting()) {
       return;
     }

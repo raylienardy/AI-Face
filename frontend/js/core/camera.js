@@ -1,8 +1,9 @@
 /**
  * FaceAI Camera Module
- * Version: 0.1 – Milestone 3
+ * Version: 0.1 – Milestone 3.5
  *
  * Responsible for all webcam operations.
+ * Uses configuration from FaceAI.config.
  */
 "use strict";
 
@@ -10,10 +11,9 @@ window.FaceAI = window.FaceAI || {};
 
 (function () {
   // ==========================================
-  // Constants
+  // Constants (from config)
   // ==========================================
-  const CAMERA_WIDTH = 1280;
-  const CAMERA_HEIGHT = 720;
+  const CONFIG = FaceAI.config;
 
   // ==========================================
   // State
@@ -25,49 +25,34 @@ window.FaceAI = window.FaceAI || {};
   };
 
   // ==========================================
-  // Public API (exposed via FaceAI.camera)
+  // Public API
   // ==========================================
   FaceAI.camera = {
-    /**
-     * Check if camera is currently streaming.
-     * @returns {boolean}
-     */
     isActive() {
       return state.isActive;
     },
 
-    /**
-     * Check if a camera start request is in progress.
-     * @returns {boolean}
-     */
     isStarting() {
       return state.isStarting;
     },
 
-    /**
-     * Start the camera and attach stream to video element.
-     * @returns {Promise<void>}
-     */
     async start() {
-      if (state.isStarting || state.isActive) {
-        return; // prevent concurrent requests
-      }
+      if (state.isStarting || state.isActive) return;
 
       state.isStarting = true;
       FaceAI.ui.setButtonDisabled(true);
       FaceAI.ui.clearError();
 
       try {
-        // Check browser support
         if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
           throw new Error("NOT_SUPPORTED");
         }
 
         const stream = await navigator.mediaDevices.getUserMedia({
           video: {
-            width: { ideal: CAMERA_WIDTH },
-            height: { ideal: CAMERA_HEIGHT },
-            facingMode: "user",
+            width: { ideal: CONFIG.CAMERA_WIDTH },
+            height: { ideal: CONFIG.CAMERA_HEIGHT },
+            facingMode: CONFIG.CAMERA_FACING_MODE,
           },
           audio: false,
         });
@@ -77,13 +62,9 @@ window.FaceAI = window.FaceAI || {};
         handleCameraError(error);
       } finally {
         state.isStarting = false;
-        // Button will be updated by success/error handlers
       }
     },
 
-    /**
-     * Stop the camera and release the stream.
-     */
     stop() {
       if (state.stream) {
         state.stream.getTracks().forEach((track) => track.stop());
@@ -96,11 +77,6 @@ window.FaceAI = window.FaceAI || {};
   // ==========================================
   // Private Functions
   // ==========================================
-
-  /**
-   * Attach a MediaStream to the video element and update UI.
-   * @param {MediaStream} stream
-   */
   function handleStream(stream) {
     state.stream = stream;
     state.isActive = true;
@@ -108,24 +84,18 @@ window.FaceAI = window.FaceAI || {};
     const video = FaceAI.ui.getVideoElement();
     video.srcObject = stream;
 
-    // onloadedmetadata ensures video dimensions are known before playing
     video.onloadedmetadata = () => {
-      // Explicit play() call as a safeguard; autoplay attribute should handle it,
-      // but some browsers may pause if not triggered by user gesture.
+      // Explicit play() as safeguard; autoplay attribute handles normally.
       video.play().catch((err) => console.warn("Video play failed:", err));
     };
 
-    // Update UI via ui module
     FaceAI.ui.hidePlaceholder();
     FaceAI.ui.setButtonActive(true);
     FaceAI.ui.updateCameraDot(true);
     FaceAI.ui.clearError();
+    FaceAI.state.set("CAMERA_READY");
   }
 
-  /**
-   * Handle errors from getUserMedia.
-   * @param {Error|string} error
-   */
   function handleCameraError(error) {
     let message = "Unable to access camera. ";
 
@@ -151,7 +121,7 @@ window.FaceAI = window.FaceAI || {};
     FaceAI.ui.showError(message);
     FaceAI.ui.updateCameraDot(false);
     FaceAI.ui.showPlaceholder();
-    FaceAI.ui.setButtonActive(false); // reset button to initial state
-    // Note: isStarting is reset in finally block
+    FaceAI.ui.setButtonActive(false);
   }
 })();
+gi;

@@ -1,8 +1,9 @@
 /**
  * FaceAI UI Module
- * Version: 0.1 – Milestone 3
+ * Version: 0.1 – Milestone 3.5
  *
  * Handles all DOM updates: placeholder, button state, status dots, error messages.
+ * Drawing functions are delegated to FaceAI.drawing (drawing.js).
  */
 "use strict";
 
@@ -18,30 +19,21 @@ window.FaceAI = window.FaceAI || {};
     placeholder: document.getElementById("camera-placeholder"),
     cameraError: document.getElementById("camera-error"),
     cameraDot: document.querySelector("#status-camera .system-status__dot"),
+    faceDot: document.querySelector("#status-face .system-status__dot"),
   };
 
   // ==========================================
-  // Public API (exposed via FaceAI.ui)
+  // Public API
   // ==========================================
   FaceAI.ui = {
-    /**
-     * Hide the "Camera Not Started" placeholder.
-     */
     hidePlaceholder() {
       ui.placeholder.classList.add("hidden");
     },
 
-    /**
-     * Show the placeholder again (on error or reset).
-     */
     showPlaceholder() {
       ui.placeholder.classList.remove("hidden");
     },
 
-    /**
-     * Update button to reflect camera active state.
-     * @param {boolean} isActive
-     */
     setButtonActive(isActive) {
       if (isActive) {
         ui.startBtn.textContent = "Camera Active";
@@ -52,49 +44,48 @@ window.FaceAI = window.FaceAI || {};
       }
     },
 
-    /**
-     * Set button disabled state (e.g., during start attempt).
-     * @param {boolean} disabled
-     */
     setButtonDisabled(disabled) {
       ui.startBtn.disabled = disabled;
     },
 
-    /**
-     * Update camera status indicator dot.
-     * @param {boolean} active
-     */
     updateCameraDot(active) {
-      if (active) {
-        ui.cameraDot.classList.remove("system-status__dot--inactive");
-        ui.cameraDot.classList.add("system-status__dot--active");
-      } else {
-        ui.cameraDot.classList.remove("system-status__dot--active");
-        ui.cameraDot.classList.add("system-status__dot--inactive");
-      }
+      this._updateDot(ui.cameraDot, active);
     },
 
-    /**
-     * Display an error message to the user.
-     * @param {string} message
-     */
+    updateFaceDot(active) {
+      this._updateDot(ui.faceDot, active);
+    },
+
     showError(message) {
       ui.cameraError.textContent = message;
     },
 
-    /**
-     * Clear the error message area.
-     */
     clearError() {
       ui.cameraError.textContent = "";
     },
 
-    /**
-     * Get the video DOM element (needed by camera module).
-     * @returns {HTMLVideoElement}
-     */
     getVideoElement() {
       return ui.video;
+    },
+
+    // Drawing placeholders – will be implemented in drawing.js
+    drawFaceBox(x, y, width, height) {
+      // TODO: delegate to FaceAI.drawing when available
+    },
+
+    clearFaceBox() {
+      // TODO: delegate to FaceAI.drawing when available
+    },
+
+    // Private helper
+    _updateDot(element, active) {
+      if (active) {
+        element.classList.remove("system-status__dot--inactive");
+        element.classList.add("system-status__dot--active");
+      } else {
+        element.classList.remove("system-status__dot--active");
+        element.classList.add("system-status__dot--inactive");
+      }
     },
   };
 })();
