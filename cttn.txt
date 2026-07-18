@@ -1,0 +1,7 @@
+Saya mau kamu buatkan saya prompt untuk deepseek bagian tahapan ini berdasarkan milestone saat ini
+isi promptnya berisi permintaan untuk melaksanakan milestone ---, tapi sebelum mulai saya mau dibagi milestone nya menjadi beberapa tahap agar bisa lebih terfokus dan lebih lengkap
+Jelas kamu tidak paham dan hanya deepseek yang telah mempelajari ke 4 repo nya yang benar2 paham isinya, jadi saya mau kamu buat isi promptnya untuk mengingatkan ulang deepseek apa saja yang telah dia pelajari dari ke 4 repo, setelah dia ingat baru silahkan buat tahapannya (jadi ingat ulang baru buat tahapannya) tujuannya agar deepseek tidak ngawur atau mabok dalam menjawab
+
+
+
+Silahkan mulai kerja dan buatkan code nya untuk bagian ini 

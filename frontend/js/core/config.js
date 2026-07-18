@@ -13,19 +13,20 @@ FaceAI.config = {
   // Camera
   CAMERA_WIDTH: 1280,
   CAMERA_HEIGHT: 720,
-  CAMERA_FACING_MODE: "user", // depan
+  CAMERA_FACING_MODE: "user",
 
-  // Detection (akan digunakan Milestone 4+)
-  MAX_FACES: 1,
-  DETECTION_THRESHOLD: 0.5,
-  DETECTION_INTERVAL_MS: 100, // minimal jeda antar deteksi
+  // Detection – Stage 4.1
+  DETECTION_MODEL_TYPE: "short", // BlazeFace model variant
+  DETECTION_MODEL_URL:
+    "https://cdn.jsdelivr.net/npm/@mediapipe/face_detection@0.4.1646425229/", // base path for model files
+  DETECTION_THRESHOLD: 0.5, // minimum confidence to accept a detection
 
-  // Capture (akan digunakan nanti)
-  AUTO_CAPTURE_DELAY: 3000, // ms
-  MIN_FACE_SIZE_PERCENT: 20, // persen dari tinggi frame
+  // Capture
+  AUTO_CAPTURE_DELAY: 3000,
+  MIN_FACE_SIZE_PERCENT: 20,
 
   // UI / Drawing
-  BOX_COLOR: "#22c55e", // hijau
+  BOX_COLOR: "#22c55e",
   BOX_LINE_WIDTH: 3,
   FPS_LIMIT: 30,
 
