@@ -1,8 +1,8 @@
 /**
  * FaceAI Application Entry Point
- * Version: 0.1 – Milestone 3.5
+ * Version: 0.1 – Milestone 4 Stage 4.2
  *
- * Initializes app, wires events.
+ * Initializes app, wires camera and detection.
  */
 "use strict";
 
@@ -11,13 +11,10 @@
   // Initialization
   // ==========================================
   function init() {
-    // Pastikan state awal
     FaceAI.state.set("IDLE");
-
     const startBtn = document.getElementById("start-camera-btn");
     startBtn.addEventListener("click", onStartClick);
-
-    console.log("FaceAI frontend initialized (v0.1 – Milestone 3.5)");
+    console.log("FaceAI frontend initialized (v0.1 – Milestone 4.2)");
   }
 
   // ==========================================
@@ -28,6 +25,9 @@
       return;
     }
     await FaceAI.camera.start();
+    // Once camera is ready, immediately start detection
+    const video = FaceAI.ui.getVideoElement();
+    await FaceAI.detection.start(video);
   }
 
   // ==========================================
