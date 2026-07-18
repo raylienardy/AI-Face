@@ -1,146 +1,191 @@
-# FaceAI
+## Versi Saat Ini
 
-FaceAI adalah proyek pembelajaran dan pengembangan Artificial Intelligence yang dibangun secara bertahap dengan pendekatan modular.
+**Version:** v0.1  
+**Milestone:** 4 – Face Detection (Stage 4.1)
 
-Tujuan utama proyek ini adalah membangun sistem yang mampu:
+### Status
 
-- mendeteksi wajah,
-- mengenali wajah yang pernah didaftarkan,
-- mengumpulkan dataset wajah,
-- kemudian dikembangkan menjadi sistem analisis wajah dan rekomendasi di masa depan.
-
-Pada versi saat ini, proyek masih berada pada tahap **Project Initialization**.
-
----
-
-# Current Version
-
-**Version:** v0.1
-
-**Milestone:** Project Initialization
-
-Status:
-
-- Backend berhasil dijalankan menggunakan FastAPI.
-- Struktur proyek telah dibuat.
-- Virtual Environment telah dikonfigurasi.
-- Git Repository telah diinisialisasi.
-
-Belum ada implementasi AI pada versi ini.
+- ✅ Backend FastAPI berjalan
+- ✅ Struktur proyek modular
+- ✅ Kamera berfungsi (webcam)
+- ✅ Loading & verifikasi model deteksi (BlazeFace)
+- ⏳ Deteksi wajah & bounding box (selanjutnya)
 
 ---
 
-# Project Structure
+## Struktur Proyek
 
 ```text
 FaceAI/
-│
 ├── backend/
+│   ├── app/
+│   │   ├── api/
+│   │   ├── core/
+│   │   ├── services/
+│   │   ├── utils/
+│   │   └── main.py
+│   ├── models/
+│   ├── logs/
+│   ├── tests/
+│   ├── requirements.txt
+│   └── .env
+│
 ├── frontend/
+│   ├── index.html
+│   ├── css/
+│   │   └── style.css
+│   ├── js/
+│   │   ├── app.js
+│   │   ├── core/
+│   │   │   ├── config.js
+│   │   │   ├── camera.js
+│   │   │   └── state.js
+│   │   ├── modules/
+│   │   │   ├── detection.js
+│   │   │   ├── capture.js
+│   │   │   ├── recognition.js
+│   │   │   ├── rating.js
+│   │   │   └── dataset.js
+│   │   ├── ui/
+│   │   │   ├── ui.js
+│   │   │   └── drawing.js
+│   │   └── utils/
+│   │       └── helpers.js
+│   └── assets/
+│       ├── models/
+│       ├── icons/
+│       └── data/
+│
 ├── datasets/
 ├── docs/
 ├── scripts/
 │
-├── README.md
+├── .gitignore
 ├── LICENSE
-└── .gitignore
+└── README.md
 ```
 
 ---
 
-# Technology Stack
+## Teknologi
 
-## Backend
+### Backend
 
 - Python 3.10
 - FastAPI
 - Uvicorn
 
-## Frontend
+### Frontend
 
-- HTML
-- CSS
-- JavaScript
-
----
-
-# Current Features
-
-- Struktur proyek
-- Backend FastAPI
-- Endpoint `/`
-- Dokumentasi API (`/docs`)
+- HTML5, CSS3, JavaScript (ES6)
+- MediaPipe Face Detection (BlazeFace)
+- WebGL (untuk inferensi AI di browser)
 
 ---
 
-# Getting Started
+## Fitur Saat Ini
 
-## 1. Clone Repository
+- ✅ Backend API dengan FastAPI (endpoint `/` dan `/docs`)
+- ✅ Struktur proyek modular
+- ✅ Kamera real‑time (webcam) dengan akses `getUserMedia`
+- ✅ State machine aplikasi
+- ✅ Konfigurasi terpusat
+- ✅ Placeholder modul untuk deteksi, capture, recognition, rating, dataset
+- ✅ Inisialisasi model BlazeFace (Stage 4.1)
+
+---
+
+## Cara Menjalankan
+
+### 1. Clone Repository
 
 ```bash
 git clone <repository-url>
-```
-
-## 2. Masuk ke Folder Project
-
-```bash
 cd FaceAI
 ```
 
-## 3. Masuk ke Folder Backend
+### 2. Backend (FastAPI)
 
 ```bash
 cd backend
-```
 
-## 4. Aktifkan Virtual Environment
+# Buat virtual environment (jika belum)
+python -m venv .venv
 
-Windows (PowerShell):
-
-```powershell
+# Aktifkan virtual environment
+# Windows PowerShell
 .\.venv\Scripts\Activate.ps1
-```
+# Git Bash / Linux / Mac
+source .venv/bin/activate
 
-Git Bash:
-
-```bash
-source .venv/Scripts/activate
-```
-
-## 5. Install Dependency
-
-```bash
+# Install dependency
 pip install -r requirements.txt
-```
 
-## 6. Jalankan Backend
-
-```bash
+# Jalankan server
 uvicorn app.main:app --reload
 ```
 
-Backend akan berjalan di:
+Buka `http://127.0.0.1:8000` untuk melihat backend, dan `http://127.0.0.1:8000/docs` untuk dokumentasi API.
 
-```
-http://127.0.0.1:8000
+### 3. Frontend (Webcam & Deteksi)
+
+Karena browser memerlukan konteks aman (`localhost` atau HTTPS) untuk mengakses kamera dan WebGL, frontend **harus dijalankan melalui server HTTP**, tidak bisa langsung dibuka dengan klik dua kali file HTML.
+
+#### Jalankan server lokal di folder `frontend`:
+
+```bash
+cd frontend
+
+# Python 3
+python -m http.server 8080
+
+# atau dengan Node.js (jika terinstall)
+npx http-server -p 8080
 ```
 
-Dokumentasi API:
+Lalu buka `http://localhost:8080` di browser (Chrome/Edge/Firefox).
 
-```
-http://127.0.0.1:8000/docs
+> **Catatan:** Untuk menguji model deteksi (Stage 4.1), buka console browser dan jalankan:
+>
+> ```js
+> FaceAI.detection.init();
+> ```
+
+---
+
+## Milestone Progress
+
+| Milestone | Deskripsi                  | Status                                   |
+| --------- | -------------------------- | ---------------------------------------- |
+| 1         | Project Initialization     | ✅ Selesai                               |
+| 2         | Frontend Foundation        | ✅ Selesai                               |
+| 3         | Camera Foundation          | ✅ Selesai                               |
+| 3.5       | Project Foundation for AI  | ✅ Selesai                               |
+| 4         | Face Detection & Alignment | 🔄 Sedang dikerjakan (Stage 4.1 selesai) |
+| 5         | Face Validation            | ⏳ Belum dimulai                         |
+| 6         | Face Capture               | ⏳ Belum dimulai                         |
+| 7         | Dataset Storage            | ⏳ Belum dimulai                         |
+| 8         | Face Recognition           | ⏳ Belum dimulai                         |
+| 9         | Face Rating                | ⏳ Belum dimulai                         |
+| 10        | Face Recommendation        | ⏳ Belum dimulai                         |
+| 11        | AI Makeup                  | ⏳ Belum dimulai                         |
+
+---
+
+## Lisensi
+
+MIT License – lihat file [LICENSE](LICENSE) untuk detail.
+
 ```
 
 ---
 
-# Milestone Progress
+**Perubahan utama:**
+- Menambahkan instruksi rinci untuk menjalankan frontend dengan server HTTP lokal.
+- Memperbarui status milestone, termasuk penambahan milestone 3.5 dan progres milestone 4.
+- Menyesuaikan struktur folder di README dengan yang terbaru.
+- Menambahkan fitur saat ini, termasuk Stage 4.1.
+- Menghapus daftar milestone lama yang hanya menampilkan Milestone 1–3 belum dimulai.
 
-- ✅ Milestone 1 — Project Initialization
-- ⏳ Milestone 2 — Not Started
-- ⏳ Milestone 3 — Not Started
-
----
-
-# License
-
-Lisensi proyek akan ditentukan pada tahap selanjutnya.
+README kini siap digunakan dan memudahkan siapa pun untuk menjalankan proyek FaceAI.
+```
