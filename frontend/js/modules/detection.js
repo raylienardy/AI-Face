@@ -1,18 +1,28 @@
 /**
  * FaceAI Detection Module
- * Version: 0.1 – Milestone 4 Stage 4.5 (debug)
+ * Version: 0.1 – Milestone 4 Phase 4.1
+ *
+ * Responsibilities:
+ * - Initialize MediaPipe FaceDetection (BlazeFace)
+ * - Verify WebGL support
+ * - Provide init() / start() / stop() placeholders
  */
 "use strict";
 
 FaceAI.detection = (function () {
-  let faceDetection = null;
-  let initialized = false;
+  // ==========================================
+  // Private State
+  // ==========================================
+  let faceDetection = null; // MediaPipe instance
+  let initialized = false; // true after successful init()
   let isRunning = false;
-  let animationFrameId = null;
   let videoElement = null;
+  let animationFrameId = null;
   let lastFrameTime = 0;
-  let multipleFaces = false;
 
+  // ==========================================
+  // Utility: WebGL support check
+  // ==========================================
   function isWebGLSupported() {
     try {
       const canvas = document.createElement("canvas");
@@ -25,174 +35,71 @@ FaceAI.detection = (function () {
     }
   }
 
+  // ==========================================
+  // Callback (placeholder untuk Phase 4.3)
+  // ==========================================
+  function onResults(results) {
+    // Akan diisi nanti
+    console.log("onResults called", results);
+  }
+
+  // ==========================================
+  // Detection Loop (placeholder)
+  // ==========================================
   async function detectFrame(now) {
     if (!isRunning || !videoElement) return;
-    const interval = 1000 / FaceAI.config.FPS_LIMIT;
-    if (now - lastFrameTime < interval) {
-      animationFrameId = requestAnimationFrame(detectFrame);
-      return;
-    }
-    lastFrameTime = now;
-    try {
-      await faceDetection.send({ image: videoElement });
-    } catch (error) {
-      console.warn("FaceAI: detection frame error", error);
-    }
+    // throttle (opsional, akan diimplementasikan penuh nanti)
     animationFrameId = requestAnimationFrame(detectFrame);
   }
 
-  function onResults(results) {
-    const faces = results.detections || [];
-    const threshold = FaceAI.config.DETECTION_THRESHOLD;
-    const validFaces = faces.filter((f) => f.score >= threshold);
-
-    if (validFaces.length === 0) {
-      FaceAI.ui.clearFaceBox();
-      FaceAI.ui.updateFaceDot(false);
-      FaceAI.ui.hideAlignedFace();
-      FaceAI.state.set("DETECTING");
-      multipleFaces = false;
-      return;
-    }
-
-    // Sort
-    const criteria = FaceAI.config.PRIMARY_FACE_CRITERIA;
-    validFaces.sort((a, b) => {
-      if (criteria === "area") {
-        const areaA = (a.boundingBox.width || 0) * (a.boundingBox.height || 0);
-        const areaB = (b.boundingBox.width || 0) * (b.boundingBox.height || 0);
-        if (areaA !== areaB) return areaB - areaA;
-      }
-      return (b.score || 0) - (a.score || 0);
-    });
-
-    multipleFaces = validFaces.length > 1;
-
-    const videoW = videoElement.videoWidth;
-    const videoH = videoElement.videoHeight;
-    const boxes = [];
-
-    validFaces.forEach((face, index) => {
-      const bbox = face.boundingBox;
-      const xCenter = bbox.xCenter || 0;
-      const yCenter = bbox.yCenter || 0;
-      const width = bbox.width || 0;
-      const height = bbox.height || 0;
-
-      const x = ((xCenter - width / 2) / 100) * videoW;
-      const y = ((yCenter - height / 2) / 100) * videoH;
-      const w = (width / 100) * videoW;
-      const h = (height / 100) * videoH;
-
-      const isPrimary = index === 0;
-      const config = FaceAI.config;
-      boxes.push({
-        x,
-        y,
-        w,
-        h,
-        confidence: face.score,
-        color: isPrimary ? config.BOX_COLOR : config.SECONDARY_BOX_COLOR,
-        lineWidth: isPrimary
-          ? config.BOX_LINE_WIDTH
-          : config.SECONDARY_BOX_LINE_WIDTH,
-        showConfidence: isPrimary,
-      });
-    });
-
-    // DEBUG
-    console.log("DEBUG ALIGNMENT:", {
-      alignEnabled: FaceAI.config.ALIGN_ENABLED,
-      numFaces: validFaces.length,
-      hasLandmarks: !!validFaces[0].landmarks,
-      landmarksLength: validFaces[0].landmarks
-        ? validFaces[0].landmarks.length
-        : 0,
-      primaryBox: boxes[0]
-        ? { x: boxes[0].x, y: boxes[0].y, w: boxes[0].w, h: boxes[0].h }
-        : null,
-    });
-
-    // Alignment
-    if (FaceAI.config.ALIGN_ENABLED && validFaces.length > 0) {
-      const primary = validFaces[0];
-      const landmarks = primary.landmarks;
-      const primaryBox = boxes[0];
-
-      if (primaryBox) {
-        try {
-          const bboxForAlign = {
-            x: primaryBox.x,
-            y: primaryBox.y,
-            w: primaryBox.w,
-            h: primaryBox.h,
-          };
-          let alignedCanvas = null;
-          if (landmarks && landmarks.length >= 2) {
-            alignedCanvas = FaceAI.geometry.alignFace(
-              videoElement,
-              landmarks,
-              bboxForAlign,
-              FaceAI.config.ALIGN_TARGET_SIZE,
-            );
-          } else {
-            // Fallback: crop without rotation
-            alignedCanvas = FaceAI.geometry.cropFace(
-              videoElement,
-              bboxForAlign,
-              FaceAI.config.ALIGN_TARGET_SIZE,
-            );
-          }
-          if (alignedCanvas) {
-            FaceAI.ui.showAlignedFace(alignedCanvas);
-          } else {
-            FaceAI.ui.hideAlignedFace();
-          }
-        } catch (err) {
-          console.error("Error in alignment/crop:", err);
-          FaceAI.ui.hideAlignedFace();
-        }
-      } else {
-        FaceAI.ui.hideAlignedFace();
-      }
-    } else {
-      FaceAI.ui.hideAlignedFace();
-    }
-
-    FaceAI.ui.drawFaceBoxes(boxes);
-    FaceAI.ui.updateFaceDot(true);
-    FaceAI.state.set("FACE_FOUND");
-  }
-
+  // ==========================================
+  // Public API
+  // ==========================================
   return {
+    /**
+     * Initialize the face detection engine.
+     * Must be called once before start().
+     * @returns {Promise<void>} resolves when model is ready, rejects on error.
+     */
     async init() {
-      if (initialized) return;
+      if (initialized) {
+        console.log("FaceAI: detection already initialized.");
+        return;
+      }
+
+      // 1. Check WebGL
       if (!isWebGLSupported()) {
         const msg =
           "Your browser does not support WebGL. Face detection cannot run.";
         FaceAI.ui.showError(msg);
         throw new Error(msg);
       }
+
       try {
+        // 2. Create FaceDetection instance
         const config = FaceAI.config;
         faceDetection = new FaceDetection({
           locateFile: (file) => `${config.DETECTION_MODEL_URL}${file}`,
         });
+
+        // 3. Set options (no outputLandmarks – we don't need landmarks on frontend)
         faceDetection.setOptions({
-          model: config.DETECTION_MODEL_TYPE,
-          minDetectionConfidence: config.DETECTION_THRESHOLD,
-          outputLandmarks: true,
+          model: config.DETECTION_MODEL_TYPE, // 'short'
+          minDetectionConfidence: config.DETECTION_THRESHOLD, // 0.5
         });
+
+        // 4. Register callback (will be filled later)
         faceDetection.onResults(onResults);
+
+        // 5. Load model
         await faceDetection.initialize();
         initialized = true;
         console.log("FaceAI: FaceDetection model loaded successfully.");
       } catch (error) {
         let message = "Failed to initialize face detection. ";
         if (
-          error.message &&
-          (error.message.includes("NetworkError") ||
-            error.message.includes("Failed to fetch"))
+          (error.message && error.message.includes("NetworkError")) ||
+          (error.message && error.message.includes("Failed to fetch"))
         ) {
           message =
             "Failed to load face detection model. Please check your internet connection.";
@@ -204,61 +111,30 @@ FaceAI.detection = (function () {
       }
     },
 
-    async start(video) {
-      if (!video) {
-        console.warn("FaceAI: cannot start detection – no video element.");
+    /**
+     * Start detection loop (Placeholder – will be implemented in Phase 4.2)
+     */
+    start() {
+      if (!initialized) {
+        console.warn("FaceAI: detection not initialized yet.");
         return;
       }
-      if (isRunning) return;
-      if (!initialized) {
-        try {
-          await this.init();
-        } catch (e) {
-          return;
-        }
-      }
-      videoElement = video;
-      if (video.readyState < 2) {
-        console.log("FaceAI: video not ready yet, waiting...");
-        await new Promise((resolve) => {
-          const onReady = () => {
-            video.removeEventListener("loadeddata", onReady);
-            resolve();
-          };
-          video.addEventListener("loadeddata", onReady);
-          if (video.readyState >= 2) {
-            video.removeEventListener("loadeddata", onReady);
-            resolve();
-          }
-        });
-      }
-      isRunning = true;
-      FaceAI.state.set("DETECTING");
-      console.log("FaceAI: detection started.");
-      lastFrameTime = performance.now();
-      animationFrameId = requestAnimationFrame(detectFrame);
+      // TODO: Phase 4.2
     },
 
+    /**
+     * Stop detection loop (Placeholder)
+     */
     stop() {
-      if (!isRunning) return;
-      isRunning = false;
-      if (animationFrameId) {
-        cancelAnimationFrame(animationFrameId);
-        animationFrameId = null;
-      }
-      videoElement = null;
-      FaceAI.state.set("CAMERA_READY");
-      console.log("FaceAI: detection stopped.");
+      // TODO: Phase 4.2
     },
 
+    /**
+     * Check if detection is running.
+     * @returns {boolean}
+     */
     isRunning() {
       return isRunning;
     },
-    hasMultipleFaces() {
-      return multipleFaces;
-    },
-
-    // Expose for manual test
-    onResults: onResults,
   };
 })();

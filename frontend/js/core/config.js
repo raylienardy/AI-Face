@@ -15,11 +15,15 @@ FaceAI.config = {
   CAMERA_HEIGHT: 720,
   CAMERA_FACING_MODE: "user",
 
-  // Detection – Stage 4.1
-  DETECTION_MODEL_TYPE: "short", // BlazeFace model variant
+  // Detection – Phase 4.1
+  DETECTION_MODEL_TYPE: "short", // BlazeFace variant
   DETECTION_MODEL_URL:
-    "https://cdn.jsdelivr.net/npm/@mediapipe/face_detection@0.4.1646425229/", // base path for model files
-  DETECTION_THRESHOLD: 0.5, // minimum confidence to accept a detection
+    "https://cdn.jsdelivr.net/npm/@mediapipe/face_detection@0.4.1646425229/",
+  DETECTION_THRESHOLD: 0.5, // minimum confidence
+
+  // Tracking (akan digunakan nanti)
+  MAX_FACES: 1,
+  TRACKING_SMOOTH_FRAMES: 3,
 
   // Capture
   AUTO_CAPTURE_DELAY: 3000,
@@ -35,14 +39,4 @@ FaceAI.config = {
 
   // i18n
   DEFAULT_LANGUAGE: "en",
-
-  // Detection & Face Selection (Stage 4.4)
-  PRIMARY_FACE_CRITERIA: "area", // 'area' or 'confidence'
-  SECONDARY_BOX_COLOR: "#9ca3af", // gray-400
-  SECONDARY_BOX_LINE_WIDTH: 2,
-
-  // Alignment (Stage 4.5)
-  ALIGN_ENABLED: true, // enable alignment preview
-  ALIGN_TARGET_SIZE: 150, // output square size (pixels)
-  ALIGN_EYE_POSITION_RATIO: 0.35, // vertical position of eyes in aligned image (from top)
 };
