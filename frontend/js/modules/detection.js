@@ -1,6 +1,12 @@
 /**
  * FaceAI Detection Module
- * Version: 0.1 – Milestone 4 Stage 4.3 (debug log)
+ * Version: 0.1 – Milestone 4 Stage 4.3 (final)
+ *
+ * Responsibilities:
+ * - Load BlazeFace model
+ * - Real‑time detection loop
+ * - Single face bounding box + confidence
+ * - Correctly reads confidence from MediaPipe's V[0].ga
  */
 "use strict";
 
@@ -38,6 +44,15 @@ FaceAI.detection = (function () {
     animationFrameId = requestAnimationFrame(detectFrame);
   }
 
+  function getConfidence(face) {
+    // MediaPipe 0.4.x stores confidence in face.V[0].ga
+    if (face.V && face.V.length > 0 && typeof face.V[0].ga === "number") {
+      return face.V[0].ga;
+    }
+    // Fallback untuk properti lain (jika suatu saat berubah)
+    return face.score ?? face.confidence ?? 0;
+  }
+
   function onResults(results) {
     const faces = results.detections || [];
     const threshold = FaceAI.config.DETECTION_THRESHOLD;
@@ -46,7 +61,7 @@ FaceAI.detection = (function () {
     let bestConfidence = 0;
 
     for (const face of faces) {
-      const score = face.score || 0;
+      const score = getConfidence(face);
       if (score >= threshold && score > bestConfidence) {
         bestConfidence = score;
         bestFace = face;
@@ -54,7 +69,6 @@ FaceAI.detection = (function () {
     }
 
     if (!bestFace) {
-      console.log("No face above threshold");
       FaceAI.ui.clearFaceBox();
       FaceAI.ui.updateFaceDot(false);
       FaceAI.state.set("DETECTING");
@@ -63,10 +77,7 @@ FaceAI.detection = (function () {
 
     const vw = videoElement.videoWidth;
     const vh = videoElement.videoHeight;
-    console.log("Video dims:", vw, vh);
-
     if (!vw || !vh) {
-      console.warn("Video dimensions not ready");
       FaceAI.ui.clearFaceBox();
       return;
     }
@@ -81,8 +92,6 @@ FaceAI.detection = (function () {
     const y = (yCenter - height / 2) * vh;
     const w = width * vw;
     const h = height * vh;
-
-    console.log("Drawing box at", { x, y, w, h, confidence: bestConfidence });
 
     FaceAI.ui.drawFaceBox(x, y, w, h, bestConfidence);
     FaceAI.ui.updateFaceDot(true);
@@ -192,6 +201,7 @@ FaceAI.detection = (function () {
       return isRunning;
     },
 
+    // Tidak perlu mengekspos onResults lagi, tapi tidak ada salahnya dibiarkan untuk tes
     onResults: onResults,
   };
 })();
