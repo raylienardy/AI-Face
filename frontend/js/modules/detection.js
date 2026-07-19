@@ -1,12 +1,11 @@
 /**
  * FaceAI Detection Module
- * Version: 0.1 – Milestone 4 Stage 4.3 (final)
+ * Version: 0.1 – Milestone 4 Stage 4.4
  *
  * Responsibilities:
- * - Load BlazeFace model
- * - Real‑time detection loop
- * - Single face bounding box + confidence
- * - Correctly reads confidence from MediaPipe's V[0].ga
+ * - Real‑time face detection (MediaPipe BlazeFace)
+ * - Multi‑face support with primary face selection
+ * - Bounding box & confidence visualization
  */
 "use strict";
 
@@ -17,6 +16,7 @@ FaceAI.detection = (function () {
   let animationFrameId = null;
   let videoElement = null;
   let lastFrameTime = 0;
+  let multipleFaces = false; // flag
 
   function isWebGLSupported() {
     try {
@@ -44,12 +44,14 @@ FaceAI.detection = (function () {
     animationFrameId = requestAnimationFrame(detectFrame);
   }
 
+  /**
+   * Extract confidence score from a detection object.
+   * MediaPipe 0.4.x stores it in face.V[0].ga.
+   */
   function getConfidence(face) {
-    // MediaPipe 0.4.x stores confidence in face.V[0].ga
     if (face.V && face.V.length > 0 && typeof face.V[0].ga === "number") {
       return face.V[0].ga;
     }
-    // Fallback untuk properti lain (jika suatu saat berubah)
     return face.score ?? face.confidence ?? 0;
   }
 
@@ -57,43 +59,73 @@ FaceAI.detection = (function () {
     const faces = results.detections || [];
     const threshold = FaceAI.config.DETECTION_THRESHOLD;
 
-    let bestFace = null;
-    let bestConfidence = 0;
+    // Filter faces above threshold
+    const validFaces = faces.filter((f) => getConfidence(f) >= threshold);
 
-    for (const face of faces) {
-      const score = getConfidence(face);
-      if (score >= threshold && score > bestConfidence) {
-        bestConfidence = score;
-        bestFace = face;
-      }
-    }
-
-    if (!bestFace) {
-      FaceAI.ui.clearFaceBox();
+    if (validFaces.length === 0) {
+      FaceAI.ui.clearFaceBoxes();
       FaceAI.ui.updateFaceDot(false);
       FaceAI.state.set("DETECTING");
+      multipleFaces = false;
       return;
     }
+
+    // Sort faces: primary criteria from config
+    const criteria = FaceAI.config.PRIMARY_FACE_CRITERIA;
+    validFaces.sort((a, b) => {
+      const confA = getConfidence(a);
+      const confB = getConfidence(b);
+      if (criteria === "area") {
+        const areaA = (a.boundingBox.width || 0) * (a.boundingBox.height || 0);
+        const areaB = (b.boundingBox.width || 0) * (b.boundingBox.height || 0);
+        if (areaA !== areaB) return areaB - areaA; // descending
+      }
+      // Fallback to confidence
+      return confB - confA;
+    });
+
+    multipleFaces = validFaces.length > 1;
 
     const vw = videoElement.videoWidth;
     const vh = videoElement.videoHeight;
     if (!vw || !vh) {
-      FaceAI.ui.clearFaceBox();
+      FaceAI.ui.clearFaceBoxes();
+      FaceAI.ui.updateFaceDot(false);
       return;
     }
 
-    const bbox = bestFace.boundingBox;
-    const xCenter = bbox.xCenter || 0;
-    const yCenter = bbox.yCenter || 0;
-    const width = bbox.width || 0;
-    const height = bbox.height || 0;
+    const config = FaceAI.config;
+    const boxes = [];
 
-    const x = (xCenter - width / 2) * vw;
-    const y = (yCenter - height / 2) * vh;
-    const w = width * vw;
-    const h = height * vh;
+    validFaces.forEach((face, index) => {
+      const bbox = face.boundingBox;
+      const xCenter = bbox.xCenter || 0;
+      const yCenter = bbox.yCenter || 0;
+      const width = bbox.width || 0;
+      const height = bbox.height || 0;
 
-    FaceAI.ui.drawFaceBox(x, y, w, h, bestConfidence);
+      const x = (xCenter - width / 2) * vw;
+      const y = (yCenter - height / 2) * vh;
+      const w = width * vw;
+      const h = height * vh;
+
+      const isPrimary = index === 0;
+
+      boxes.push({
+        x,
+        y,
+        w,
+        h,
+        confidence: getConfidence(face),
+        color: isPrimary ? config.BOX_COLOR : config.SECONDARY_BOX_COLOR,
+        lineWidth: isPrimary
+          ? config.BOX_LINE_WIDTH
+          : config.SECONDARY_BOX_LINE_WIDTH,
+        showConfidence: isPrimary, // hanya tampilkan teks confidence pada primary
+      });
+    });
+
+    FaceAI.ui.drawFaceBoxes(boxes);
     FaceAI.ui.updateFaceDot(true);
     FaceAI.state.set("FACE_FOUND");
   }
@@ -201,7 +233,8 @@ FaceAI.detection = (function () {
       return isRunning;
     },
 
-    // Tidak perlu mengekspos onResults lagi, tapi tidak ada salahnya dibiarkan untuk tes
-    onResults: onResults,
+    hasMultipleFaces() {
+      return multipleFaces;
+    },
   };
 })();

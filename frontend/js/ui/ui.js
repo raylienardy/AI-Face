@@ -1,6 +1,6 @@
 /**
  * FaceAI UI Module
- * Version: 0.1 – Milestone 4 Phase 4.3
+ * Version: 0.1 – Milestone 4 Stage 4.4
  *
  * Handles all DOM updates: placeholder, button state, status dots, error messages.
  * Drawing functions delegated to FaceAI.drawing.
@@ -10,9 +10,6 @@
 window.FaceAI = window.FaceAI || {};
 
 (function () {
-  // ==========================================
-  // DOM Reference Cache
-  // ==========================================
   const ui = {
     startBtn: document.getElementById("start-camera-btn"),
     video: document.getElementById("camera-video"),
@@ -22,9 +19,6 @@ window.FaceAI = window.FaceAI || {};
     faceDot: document.querySelector("#status-face .system-status__dot"),
   };
 
-  // ==========================================
-  // Public API
-  // ==========================================
   FaceAI.ui = {
     hidePlaceholder() {
       ui.placeholder.classList.add("hidden");
@@ -68,12 +62,12 @@ window.FaceAI = window.FaceAI || {};
       return ui.video;
     },
 
-    // Drawing delegation (ke drawing.js)
-    drawFaceBox(x, y, width, height, confidence) {
-      FaceAI.drawing.drawBox(x, y, width, height, confidence);
+    // Delegasi drawing (multi box)
+    drawFaceBoxes(boxes) {
+      FaceAI.drawing.drawBoxes(boxes);
     },
 
-    clearFaceBox() {
+    clearFaceBoxes() {
       FaceAI.drawing.clear();
     },
 
