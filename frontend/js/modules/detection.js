@@ -1,11 +1,11 @@
 /**
  * FaceAI Detection Module
- * Version: 0.1 – Milestone 4 Stage 4.2 (Revised)
+ * Version: 0.1 – Milestone 4 Stage 4.3
  *
  * Responsibilities:
- * - Initialize MediaPipe FaceDetection with BlazeFace model
- * - Run real-time detection loop on video stream
- * - Start / stop detection on demand, even if video is not yet ready
+ * - Real-time face detection via MediaPipe
+ * - Extract bounding box & confidence
+ * - Update UI and state
  */
 "use strict";
 
@@ -19,7 +19,7 @@ FaceAI.detection = (function () {
   let animationFrameId = null;
   let videoElement = null;
   let lastFrameTime = 0;
-  let pendingStart = false; // true if start() called before video ready
+  let pendingStart = false;
 
   // ==========================================
   // Utility: WebGL support check
@@ -40,7 +40,7 @@ FaceAI.detection = (function () {
   // Detection Loop (private)
   // ==========================================
   async function detectFrame(now) {
-    if (!isRunning) return;
+    if (!isRunning || !videoElement) return;
 
     const interval = 1000 / FaceAI.config.FPS_LIMIT;
     if (now - lastFrameTime < interval) {
@@ -59,12 +59,47 @@ FaceAI.detection = (function () {
   }
 
   // ==========================================
-  // Results Callback (placeholder for Stage 4.3)
+  // Results Callback (Stage 4.3)
   // ==========================================
   function onResults(results) {
     const faces = results.detections || [];
-    if (faces.length > 0) {
-      console.log(`FaceAI: ${faces.length} face(s) detected`);
+    const threshold = FaceAI.config.DETECTION_THRESHOLD;
+
+    // Find the best detection (highest confidence above threshold)
+    let bestFace = null;
+    let bestConfidence = 0;
+
+    for (const face of faces) {
+      const score = face.score || 0;
+      if (score > threshold && score > bestConfidence) {
+        bestConfidence = score;
+        bestFace = face;
+      }
+    }
+
+    if (bestFace) {
+      // Convert relative coordinates (0-100) to pixel values
+      const videoW = videoElement.videoWidth;
+      const videoH = videoElement.videoHeight;
+      const bbox = bestFace.boundingBox;
+      const xCenter = bbox.xCenter || 0;
+      const yCenter = bbox.yCenter || 0;
+      const width = bbox.width || 0;
+      const height = bbox.height || 0;
+
+      const x = ((xCenter - width / 2) / 100) * videoW;
+      const y = ((yCenter - height / 2) / 100) * videoH;
+      const w = (width / 100) * videoW;
+      const h = (height / 100) * videoH;
+
+      FaceAI.ui.drawFaceBox(x, y, w, h, bestConfidence);
+      FaceAI.ui.updateFaceDot(true);
+      FaceAI.state.set("FACE_FOUND");
+    } else {
+      // No face found
+      FaceAI.ui.clearFaceBox();
+      FaceAI.ui.updateFaceDot(false);
+      FaceAI.state.set("DETECTING");
     }
   }
 

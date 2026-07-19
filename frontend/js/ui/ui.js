@@ -69,12 +69,12 @@ window.FaceAI = window.FaceAI || {};
     },
 
     // Drawing placeholders – will be implemented in drawing.js
-    drawFaceBox(x, y, width, height) {
-      // TODO: delegate to FaceAI.drawing when available
+    drawFaceBox(x, y, width, height, confidence) {
+      FaceAI.drawing.drawBox(x, y, width, height, confidence);
     },
 
     clearFaceBox() {
-      // TODO: delegate to FaceAI.drawing when available
+      FaceAI.drawing.clear();
     },
 
     // Private helper
