@@ -44,4 +44,5 @@ FaceAI.config = {
   PRIMARY_FACE_CRITERIA: "area", // 'area' or 'confidence'
   SECONDARY_BOX_COLOR: "#9ca3af", // gray-400
   SECONDARY_BOX_LINE_WIDTH: 2,
+  DETECTION_OUTPUT_LANDMARKS: true, // request BlazeFace to output landmarks
 };

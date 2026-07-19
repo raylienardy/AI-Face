@@ -17,6 +17,7 @@ FaceAI.detection = (function () {
   let videoElement = null;
   let lastFrameTime = 0;
   let multipleFaces = false; // flag
+  let onFaceDataCallback = null; // ← tambahkan ini
 
   function isWebGLSupported() {
     try {
@@ -72,6 +73,37 @@ FaceAI.detection = (function () {
 
     // Filter faces above threshold
     const validFaces = faces.filter((f) => getConfidence(f) >= threshold);
+
+    // === Face Data Extraction untuk Observer ===
+    if (onFaceDataCallback) {
+      if (validFaces.length > 0) {
+        const primary = validFaces[0]; // data wajah pertama
+        const bbox = primary.boundingBox;
+        const vw = videoElement.videoWidth;
+        const vh = videoElement.videoHeight;
+        const xCenter = bbox.xCenter || 0;
+        const yCenter = bbox.yCenter || 0;
+        const width = bbox.width || 0;
+        const height = bbox.height || 0;
+
+        const faceData = {
+          bbox: {
+            x: (xCenter - width / 2) * vw,
+            y: (yCenter - height / 2) * vh,
+            width: width * vw,
+            height: height * vh,
+          },
+          confidence: getConfidence(primary),
+          landmarks: primary.landmarks
+            ? primary.landmarks.map((l) => ({ x: l.x, y: l.y }))
+            : null,
+        };
+        onFaceDataCallback(faceData);
+      } else {
+        onFaceDataCallback(null);
+      }
+    }
+    // ===================================
 
     if (validFaces.length === 0) {
       FaceAI.ui.clearFaceBoxes();
@@ -246,6 +278,9 @@ FaceAI.detection = (function () {
 
     hasMultipleFaces() {
       return multipleFaces;
+    },
+    onFaceData(callback) {
+      onFaceDataCallback = callback;
     },
   };
 })();

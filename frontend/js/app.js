@@ -24,15 +24,14 @@
   }
 
   async function onStartClick() {
-    if (FaceAI.camera.isActive() || FaceAI.camera.isStarting()) {
-      return;
-    }
-    try {
-      await FaceAI.camera.start();
-      const video = FaceAI.ui.getVideoElement();
-      await FaceAI.detection.start(video);
-    } catch (err) {
-      console.error("Failed to start camera/detection:", err);
+    if (FaceAI.camera.isActive() || FaceAI.camera.isStarting()) return;
+    await FaceAI.camera.start();
+    const video = FaceAI.ui.getVideoElement();
+    await FaceAI.detection.start(video);
+    // Mulai quality assessment (hanya sekali)
+    if (!FaceAI.quality._initialized) {
+      FaceAI.quality.init();
+      FaceAI.quality._initialized = true;
     }
   }
 
