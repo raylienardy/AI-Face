@@ -1,11 +1,12 @@
 /**
  * FaceAI Detection Module
- * Version: 0.1 – Milestone 4 Stage 4.3
+ * Version: 0.1 – Milestone 4 Stage 4.3 (revised final)
  *
  * Responsibilities:
  * - Load BlazeFace model (4.1)
  * - Real‑time detection loop (4.2)
  * - Single face bounding box + confidence (4.3)
+ * - Validasi dimensi video sebelum menggambar
  * - State machine integration
  */
 "use strict";
@@ -49,7 +50,6 @@ FaceAI.detection = (function () {
     }
     lastFrameTime = now;
 
-    // Send frame without blocking the loop
     faceDetection.send({ image: videoElement }).catch((error) => {
       console.warn("FaceAI: detection send error", error);
     });
@@ -61,10 +61,11 @@ FaceAI.detection = (function () {
   // Results Callback (Stage 4.3)
   // ==========================================
   function onResults(results) {
+    console.log("onResults called", results);
+
     const faces = results.detections || [];
     const threshold = FaceAI.config.DETECTION_THRESHOLD;
 
-    // Find detection with highest confidence above threshold
     let bestFace = null;
     let bestConfidence = 0;
 
@@ -76,41 +77,49 @@ FaceAI.detection = (function () {
       }
     }
 
-    if (bestFace) {
-      const bbox = bestFace.boundingBox;
-      // Convert relative coordinates (0-100) to pixel values
-      const vw = videoElement.videoWidth;
-      const vh = videoElement.videoHeight;
-      const xCenter = bbox.xCenter || 0;
-      const yCenter = bbox.yCenter || 0;
-      const width = bbox.width || 0;
-      const height = bbox.height || 0;
-
-      const x = ((xCenter - width / 2) / 100) * vw;
-      const y = ((yCenter - height / 2) / 100) * vh;
-      const w = (width / 100) * vw;
-      const h = (height / 100) * vh;
-
-      // Draw on canvas overlay
-      FaceAI.ui.drawFaceBox(x, y, w, h, bestConfidence);
-      FaceAI.ui.updateFaceDot(true);
-      FaceAI.state.set("FACE_FOUND");
-    } else {
-      // No valid face – clear overlay
+    if (!bestFace) {
       FaceAI.ui.clearFaceBox();
       FaceAI.ui.updateFaceDot(false);
       FaceAI.state.set("DETECTING");
+      return;
     }
+
+    // Pastikan video memiliki dimensi valid sebelum menghitung koordinat
+    const vw = videoElement.videoWidth;
+    const vh = videoElement.videoHeight;
+    if (!vw || !vh) {
+      console.warn("Video dimensions not ready yet");
+      FaceAI.ui.clearFaceBox();
+      return;
+    }
+
+    const bbox = bestFace.boundingBox;
+    const xCenter = bbox.xCenter || 0;
+    const yCenter = bbox.yCenter || 0;
+    const width = bbox.width || 0;
+    const height = bbox.height || 0;
+
+    const x = ((xCenter - width / 2) / 100) * vw;
+    const y = ((yCenter - height / 2) / 100) * vh;
+    const w = (width / 100) * vw;
+    const h = (height / 100) * vh;
+
+    // Pastikan nilai valid (bukan NaN atau negatif)
+    if (isNaN(x) || isNaN(y) || isNaN(w) || isNaN(h)) {
+      console.warn("Invalid bounding box coordinates");
+      FaceAI.ui.clearFaceBox();
+      return;
+    }
+
+    FaceAI.ui.drawFaceBox(x, y, w, h, bestConfidence);
+    FaceAI.ui.updateFaceDot(true);
+    FaceAI.state.set("FACE_FOUND");
   }
 
   // ==========================================
   // Public API
   // ==========================================
   return {
-    /**
-     * Initialize the face detection engine.
-     * @returns {Promise<void>}
-     */
     async init() {
       if (initialized) return;
 
@@ -153,10 +162,6 @@ FaceAI.detection = (function () {
       }
     },
 
-    /**
-     * Start detection loop.
-     * @param {HTMLVideoElement} video
-     */
     async start(video) {
       if (!video) {
         console.warn("FaceAI: cannot start detection – no video element.");
@@ -188,6 +193,21 @@ FaceAI.detection = (function () {
         });
       }
 
+      // Tambahan: pastikan videoWidth > 0, jika belum tunggu sedikit lagi
+      if (!video.videoWidth || !video.videoHeight) {
+        console.log("Waiting for video dimensions...");
+        await new Promise((resolve) => {
+          const checkDimensions = () => {
+            if (video.videoWidth && video.videoHeight) {
+              resolve();
+            } else {
+              requestAnimationFrame(checkDimensions);
+            }
+          };
+          checkDimensions();
+        });
+      }
+
       isRunning = true;
       FaceAI.state.set("DETECTING");
       console.log("FaceAI: detection started.");
@@ -195,9 +215,6 @@ FaceAI.detection = (function () {
       animationFrameId = requestAnimationFrame(detectFrame);
     },
 
-    /**
-     * Stop detection loop.
-     */
     stop() {
       if (!isRunning) return;
       isRunning = false;
@@ -210,12 +227,10 @@ FaceAI.detection = (function () {
       console.log("FaceAI: detection stopped.");
     },
 
-    /**
-     * Check if detection loop is active.
-     * @returns {boolean}
-     */
     isRunning() {
       return isRunning;
     },
+
+    onResults: onResults,
   };
 })();
