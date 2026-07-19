@@ -85,7 +85,6 @@ window.FaceAI = window.FaceAI || {};
     video.srcObject = stream;
 
     video.onloadedmetadata = () => {
-      // Explicit play() as safeguard; autoplay attribute handles normally.
       video.play().catch((err) => console.warn("Video play failed:", err));
     };
 
@@ -124,4 +123,3 @@ window.FaceAI = window.FaceAI || {};
     FaceAI.ui.setButtonActive(false);
   }
 })();
-gi;

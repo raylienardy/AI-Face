@@ -1,8 +1,8 @@
 /**
  * FaceAI Geometry Utilities
- * Version: 0.1 – Milestone 4 Stage 4.5
+ * Version: 0.2 – Milestone 4 Stage 4.5 (revised)
  *
- * Functions for face alignment using eye landmarks.
+ * Robust face alignment using eye landmarks + bounding box crop.
  */
 "use strict";
 
@@ -10,72 +10,74 @@ FaceAI.geometry = (function () {
   // ==========================================
   // Public API
   // ==========================================
-
   return {
     /**
-     * Align a face using eye positions.
-     * Returns a square canvas element with the aligned face.
-     *
+     * Align a face using eye positions and bounding box.
      * @param {HTMLVideoElement} video - source video element
-     * @param {Object} landmarks - BlazeFace landmarks (array of {x, y, z} or object with keys)
-     *   Expected: landmarks[0] = right eye, landmarks[1] = left eye
-     * @param {number} targetSize - output width & height in pixels
-     * @returns {HTMLCanvasElement|null} canvas with aligned face, or null if landmarks invalid
+     * @param {Array} landmarks - BlazeFace landmarks (at least 2: right eye, left eye)
+     * @param {Object} bbox - face bounding box {x, y, w, h} in pixels
+     * @param {number} targetSize - output canvas size
+     * @returns {HTMLCanvasElement|null}
      */
-    alignFace(video, landmarks, targetSize = 150) {
-      if (!video || !landmarks || landmarks.length < 2) return null;
+    alignFace(video, landmarks, bbox, targetSize = 150) {
+      if (!video || !landmarks || landmarks.length < 2 || !bbox) return null;
 
-      // BlazeFace landmarks order (6 points):
-      // 0: right eye, 1: left eye, 2: nose, 3: mouth, 4: right ear, 5: left ear
       const rightEye = landmarks[0];
       const leftEye = landmarks[1];
-
       if (!rightEye || !leftEye) return null;
 
       const vw = video.videoWidth;
       const vh = video.videoHeight;
 
-      // Convert relative coords (0-1 or 0-100? BlazeFace uses normalized [0,1] for landmarks)
-      // Actually, BlazeFace landmarks are normalized to [0,1] relative to image dimensions.
-      // So we multiply by video dimensions.
+      // Koordinat mata dalam pixel
       const reX = rightEye.x * vw;
       const reY = rightEye.y * vh;
       const leX = leftEye.x * vw;
       const leY = leftEye.y * vh;
 
-      // Compute angle between the eyes
+      // Sudut antara mata
       const dx = leX - reX;
       const dy = leY - reY;
-      const angle = Math.atan2(dy, dx) * (180 / Math.PI); // degrees
+      const angle = Math.atan2(dy, dx); // radian
 
-      // Center point between eyes
-      const centerX = (reX + leX) / 2;
-      const centerY = (reY + leY) / 2;
+      // Perluas bounding box untuk memberi margin (ambil 25% lebih besar)
+      const margin = 0.25;
+      const cx = bbox.x + bbox.w / 2;
+      const cy = bbox.y + bbox.h / 2;
+      const bw = bbox.w * (1 + margin);
+      const bh = bbox.h * (1 + margin);
+      const bx = Math.max(0, cx - bw / 2);
+      const by = Math.max(0, cy - bh / 2);
+      const cropW = Math.min(vw - bx, bw);
+      const cropH = Math.min(vh - by, bh);
 
-      // Desired eye distance in output (we'll scale so that eye distance is about 40% of target size)
-      const eyeDist = Math.sqrt(dx * dx + dy * dy);
-      if (eyeDist < 1) return null; // avoid division by zero
+      // Buat canvas sementara untuk crop
+      const cropCanvas = document.createElement("canvas");
+      cropCanvas.width = cropW;
+      cropCanvas.height = cropH;
+      const cropCtx = cropCanvas.getContext("2d");
+      cropCtx.drawImage(video, bx, by, cropW, cropH, 0, 0, cropW, cropH);
 
-      const desiredEyeDist = targetSize * 0.4; // 40% of output width
-      const scale = desiredEyeDist / eyeDist;
+      // Canvas output
+      const output = document.createElement("canvas");
+      output.width = targetSize;
+      output.height = targetSize;
+      const ctx = output.getContext("2d");
 
-      // Create an offscreen canvas for the alignment
-      const canvas = document.createElement("canvas");
-      canvas.width = targetSize;
-      canvas.height = targetSize;
-      const ctx = canvas.getContext("2d");
+      // Hitung skala agar crop pas di output
+      const scale = Math.min(targetSize / cropW, targetSize / cropH);
 
-      // Translate to center of output, rotate, scale
+      // Pusat rotasi adalah titik tengah crop (di mana mata berada relatif terhadap crop)
+      const eyeCenterCropX = (reX + leX) / 2 - bx;
+      const eyeCenterCropY = (reY + leY) / 2 - by;
+
+      // Transformasi: pindahkan pusat output ke tengah, rotasi, skala, lalu gambar crop dengan offset sehingga pusat mata berada di tengah output
       ctx.translate(targetSize / 2, targetSize / 2);
-      ctx.rotate((-angle * Math.PI) / 180); // rotate to align eyes horizontally
+      ctx.rotate(-angle); // luruskan
       ctx.scale(scale, scale);
-      // Draw the video frame centered at the eye midpoint
-      ctx.drawImage(video, -centerX, -centerY, vw, vh);
+      ctx.drawImage(cropCanvas, -eyeCenterCropX, -eyeCenterCropY);
 
-      // Note: we don't crop tightly to face; the entire rotated image is drawn.
-      // We can later add a face crop using bounding box if needed.
-
-      return canvas;
+      return output;
     },
   };
 })();
