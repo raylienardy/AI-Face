@@ -40,4 +40,9 @@ FaceAI.config = {
   PRIMARY_FACE_CRITERIA: "area", // 'area' or 'confidence'
   SECONDARY_BOX_COLOR: "#9ca3af", // gray-400
   SECONDARY_BOX_LINE_WIDTH: 2,
+
+  // Alignment (Stage 4.5)
+  ALIGN_ENABLED: true, // enable alignment preview
+  ALIGN_TARGET_SIZE: 150, // output square size (pixels)
+  ALIGN_EYE_POSITION_RATIO: 0.35, // vertical position of eyes in aligned image (from top)
 };

@@ -214,3 +214,22 @@ body {
   height: 100%;
   pointer-events: none; /* biarkan click menembus ke video */
 }
+
+/* Alignment Preview */
+.align-preview {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.3rem;
+}
+#align-canvas {
+  width: 150px;
+  height: 150px;
+  border-radius: 8px;
+  border: 2px solid var(--color-inactive);
+  object-fit: cover; /* maintain aspect ratio inside canvas dimensions */
+}
+.align-preview__label {
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+}

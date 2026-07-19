@@ -124,6 +124,24 @@ FaceAI.detection = (function () {
       });
     });
 
+    // Alignment for primary face (Stage 4.5)
+    if (FaceAI.config.ALIGN_ENABLED && validFaces.length > 0) {
+      const primary = validFaces[0];
+      const landmarks = primary.landmarks; // array of NormalizedLandmark
+      if (landmarks && landmarks.length >= 2) {
+        const alignedCanvas = FaceAI.geometry.alignFace(
+          videoElement,
+          landmarks,
+          FaceAI.config.ALIGN_TARGET_SIZE,
+        );
+        FaceAI.ui.showAlignedFace(alignedCanvas);
+      } else {
+        FaceAI.ui.hideAlignedFace();
+      }
+    } else {
+      FaceAI.ui.hideAlignedFace();
+    }
+
     FaceAI.ui.drawFaceBoxes(boxes);
     FaceAI.ui.updateFaceDot(true);
     FaceAI.state.set("FACE_FOUND"); // state indicates at least one valid face

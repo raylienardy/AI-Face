@@ -81,6 +81,22 @@ window.FaceAI = window.FaceAI || {};
       FaceAI.drawing.clear();
     },
 
+    showAlignedFace(canvas) {
+      const alignCanvas = document.getElementById("align-canvas");
+      if (!alignCanvas || !canvas) return;
+      const ctx = alignCanvas.getContext("2d");
+      alignCanvas.width = FaceAI.config.ALIGN_TARGET_SIZE;
+      alignCanvas.height = FaceAI.config.ALIGN_TARGET_SIZE;
+      ctx.clearRect(0, 0, alignCanvas.width, alignCanvas.height);
+      ctx.drawImage(canvas, 0, 0, alignCanvas.width, alignCanvas.height);
+      // Show the container
+      document.getElementById("align-preview").style.display = "flex";
+    },
+
+    hideAlignedFace() {
+      document.getElementById("align-preview").style.display = "none";
+    },
+
     // Private helper
     _updateDot(element, active) {
       if (active) {
