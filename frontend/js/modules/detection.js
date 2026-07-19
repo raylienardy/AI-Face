@@ -1,17 +1,10 @@
 /**
  * FaceAI Detection Module
- * Version: 0.1 – Milestone 4 Stage 4.5 (revised)
- *
- * - Real-time face detection via MediaPipe
- * - Primary face selection
- * - Face alignment (using eye landmarks)
+ * Version: 0.1 – Milestone 4 Stage 4.5 (debug)
  */
 "use strict";
 
 FaceAI.detection = (function () {
-  // ==========================================
-  // Private State
-  // ==========================================
   let faceDetection = null;
   let initialized = false;
   let isRunning = false;
@@ -20,9 +13,6 @@ FaceAI.detection = (function () {
   let lastFrameTime = 0;
   let multipleFaces = false;
 
-  // ==========================================
-  // Utility: WebGL support check
-  // ==========================================
   function isWebGLSupported() {
     try {
       const canvas = document.createElement("canvas");
@@ -35,36 +25,25 @@ FaceAI.detection = (function () {
     }
   }
 
-  // ==========================================
-  // Detection Loop (private)
-  // ==========================================
   async function detectFrame(now) {
     if (!isRunning || !videoElement) return;
-
     const interval = 1000 / FaceAI.config.FPS_LIMIT;
     if (now - lastFrameTime < interval) {
       animationFrameId = requestAnimationFrame(detectFrame);
       return;
     }
     lastFrameTime = now;
-
     try {
       await faceDetection.send({ image: videoElement });
     } catch (error) {
       console.warn("FaceAI: detection frame error", error);
     }
-
     animationFrameId = requestAnimationFrame(detectFrame);
   }
 
-  // ==========================================
-  // Results Callback (Stage 4.4 + 4.5)
-  // ==========================================
   function onResults(results) {
     const faces = results.detections || [];
     const threshold = FaceAI.config.DETECTION_THRESHOLD;
-
-    // Filter faces above threshold
     const validFaces = faces.filter((f) => f.score >= threshold);
 
     if (validFaces.length === 0) {
@@ -76,7 +55,7 @@ FaceAI.detection = (function () {
       return;
     }
 
-    // Sort faces according to primary criteria
+    // Sort
     const criteria = FaceAI.config.PRIMARY_FACE_CRITERIA;
     validFaces.sort((a, b) => {
       if (criteria === "area") {
@@ -89,7 +68,6 @@ FaceAI.detection = (function () {
 
     multipleFaces = validFaces.length > 1;
 
-    // Build array of box objects for drawing
     const videoW = videoElement.videoWidth;
     const videoH = videoElement.videoHeight;
     const boxes = [];
@@ -108,7 +86,6 @@ FaceAI.detection = (function () {
 
       const isPrimary = index === 0;
       const config = FaceAI.config;
-
       boxes.push({
         x,
         y,
@@ -123,29 +100,63 @@ FaceAI.detection = (function () {
       });
     });
 
-    // Alignment for primary face (Stage 4.5)
+    // DEBUG
+    console.log("DEBUG ALIGNMENT:", {
+      alignEnabled: FaceAI.config.ALIGN_ENABLED,
+      numFaces: validFaces.length,
+      hasLandmarks: !!validFaces[0].landmarks,
+      landmarksLength: validFaces[0].landmarks
+        ? validFaces[0].landmarks.length
+        : 0,
+      primaryBox: boxes[0]
+        ? { x: boxes[0].x, y: boxes[0].y, w: boxes[0].w, h: boxes[0].h }
+        : null,
+    });
+
+    // Alignment
     if (FaceAI.config.ALIGN_ENABLED && validFaces.length > 0) {
       const primary = validFaces[0];
       const landmarks = primary.landmarks;
-      // Gunakan bounding box wajah primer yang sudah dihitung sebelumnya (boxes[0])
-      const primaryBox = boxes[0]; // {x, y, w, h}
-      if (landmarks && landmarks.length >= 2 && primaryBox) {
-        const bboxForAlign = {
-          x: primaryBox.x,
-          y: primaryBox.y,
-          w: primaryBox.w,
-          h: primaryBox.h,
-        };
-        const alignedCanvas = FaceAI.geometry.alignFace(
-          videoElement,
-          landmarks,
-          bboxForAlign,
-          FaceAI.config.ALIGN_TARGET_SIZE,
-        );
-        FaceAI.ui.showAlignedFace(alignedCanvas);
+      const primaryBox = boxes[0];
+
+      if (primaryBox) {
+        try {
+          const bboxForAlign = {
+            x: primaryBox.x,
+            y: primaryBox.y,
+            w: primaryBox.w,
+            h: primaryBox.h,
+          };
+          let alignedCanvas = null;
+          if (landmarks && landmarks.length >= 2) {
+            alignedCanvas = FaceAI.geometry.alignFace(
+              videoElement,
+              landmarks,
+              bboxForAlign,
+              FaceAI.config.ALIGN_TARGET_SIZE,
+            );
+          } else {
+            // Fallback: crop without rotation
+            alignedCanvas = FaceAI.geometry.cropFace(
+              videoElement,
+              bboxForAlign,
+              FaceAI.config.ALIGN_TARGET_SIZE,
+            );
+          }
+          if (alignedCanvas) {
+            FaceAI.ui.showAlignedFace(alignedCanvas);
+          } else {
+            FaceAI.ui.hideAlignedFace();
+          }
+        } catch (err) {
+          console.error("Error in alignment/crop:", err);
+          FaceAI.ui.hideAlignedFace();
+        }
       } else {
         FaceAI.ui.hideAlignedFace();
       }
+    } else {
+      FaceAI.ui.hideAlignedFace();
     }
 
     FaceAI.ui.drawFaceBoxes(boxes);
@@ -153,33 +164,25 @@ FaceAI.detection = (function () {
     FaceAI.state.set("FACE_FOUND");
   }
 
-  // ==========================================
-  // Public API
-  // ==========================================
   return {
     async init() {
       if (initialized) return;
-
       if (!isWebGLSupported()) {
         const msg =
           "Your browser does not support WebGL. Face detection cannot run.";
         FaceAI.ui.showError(msg);
         throw new Error(msg);
       }
-
       try {
         const config = FaceAI.config;
         faceDetection = new FaceDetection({
           locateFile: (file) => `${config.DETECTION_MODEL_URL}${file}`,
         });
-
-        // ✨ PERBAIKAN: tambahkan outputLandmarks: true
         faceDetection.setOptions({
           model: config.DETECTION_MODEL_TYPE,
           minDetectionConfidence: config.DETECTION_THRESHOLD,
-          outputLandmarks: true, // <-- agar landmarks tersedia
+          outputLandmarks: true,
         });
-
         faceDetection.onResults(onResults);
         await faceDetection.initialize();
         initialized = true;
@@ -207,7 +210,6 @@ FaceAI.detection = (function () {
         return;
       }
       if (isRunning) return;
-
       if (!initialized) {
         try {
           await this.init();
@@ -215,9 +217,7 @@ FaceAI.detection = (function () {
           return;
         }
       }
-
       videoElement = video;
-
       if (video.readyState < 2) {
         console.log("FaceAI: video not ready yet, waiting...");
         await new Promise((resolve) => {
@@ -232,7 +232,6 @@ FaceAI.detection = (function () {
           }
         });
       }
-
       isRunning = true;
       FaceAI.state.set("DETECTING");
       console.log("FaceAI: detection started.");
@@ -255,9 +254,11 @@ FaceAI.detection = (function () {
     isRunning() {
       return isRunning;
     },
-
     hasMultipleFaces() {
       return multipleFaces;
     },
+
+    // Expose for manual test
+    onResults: onResults,
   };
 })();

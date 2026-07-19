@@ -1,19 +1,15 @@
-<!--
-========================================
-FaceAI
-Milestone 4 – Stage 4.1
-Load & Verify BlazeFace Model
-Version 0.1
-========================================
--->
 <!doctype html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>FaceAI - Face Intelligence Platform</title>
+    <!-- Allow eval for MediaPipe (development only) -->
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data:; media-src 'self'; connect-src *;"
+    />
     <link rel="stylesheet" href="css/style.css" />
-    <!-- MediaPipe Face Detection Library -->
     <script
       src="https://cdn.jsdelivr.net/npm/@mediapipe/face_detection@0.4.1646425229/face_detection.js"
       crossorigin="anonymous"
@@ -26,7 +22,6 @@ Version 0.1
     </header>
 
     <main class="main">
-      <!-- Backend Status -->
       <section class="status-panel" id="backend-status">
         <h2 class="status-panel__title">Backend Status</h2>
         <p class="status-panel__value status-panel__value--disconnected">
@@ -34,7 +29,6 @@ Version 0.1
         </p>
       </section>
 
-      <!-- Camera Preview -->
       <section class="camera-preview" id="camera-preview">
         <video id="camera-video" autoplay playsinline muted></video>
         <canvas id="face-canvas"></canvas>
@@ -43,7 +37,6 @@ Version 0.1
         </div>
       </section>
 
-      <!-- System Status Indicators -->
       <section class="system-status" id="system-status">
         <div class="system-status__item" id="status-backend">
           <span class="system-status__label">Backend</span>
@@ -64,18 +57,15 @@ Version 0.1
         <span class="align-preview__label">Aligned</span>
       </div>
 
-      <!-- Action Button -->
       <button class="btn btn--primary" id="start-camera-btn">
         Start Camera
       </button>
-
-      <!-- Camera Error Message -->
       <p class="camera-error" id="camera-error"></p>
     </main>
+
     <script src="js/core/config.js"></script>
     <script src="js/utils/helpers.js"></script>
     <script src="js/utils/geometry.js"></script>
-    <!-- tambahkan ini -->
     <script src="js/core/state.js"></script>
     <script src="js/ui/ui.js"></script>
     <script src="js/ui/drawing.js"></script>
