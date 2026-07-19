@@ -32,6 +32,17 @@ FaceAI.detection = (function () {
 
   function detectFrame(now) {
     if (!isRunning || !videoElement) return;
+    // Additional guard: if context lost, stop sending
+    if (
+      faceDetection &&
+      faceDetection.isContextLost &&
+      faceDetection.isContextLost()
+    ) {
+      console.warn("WebGL context lost – stopping detection");
+      FaceAI.detection.stop();
+      FaceAI.ui.showError("Graphics context lost. Please refresh the page.");
+      return;
+    }
     const interval = 1000 / FaceAI.config.FPS_LIMIT;
     if (now - lastFrameTime < interval) {
       animationFrameId = requestAnimationFrame(detectFrame);

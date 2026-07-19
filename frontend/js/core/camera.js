@@ -93,6 +93,23 @@ window.FaceAI = window.FaceAI || {};
     FaceAI.ui.updateCameraDot(true);
     FaceAI.ui.clearError();
     FaceAI.state.set("CAMERA_READY");
+    // Detect when camera is disconnected
+    const videoTrack = stream.getVideoTracks()[0];
+    if (videoTrack) {
+      videoTrack.onended = () => {
+        console.warn("Camera disconnected unexpectedly");
+        FaceAI.camera.stop();
+        FaceAI.detection.stop();
+        FaceAI.ui.showPlaceholder();
+        FaceAI.ui.setButtonActive(false);
+        FaceAI.ui.updateCameraDot(false);
+        FaceAI.ui.updateFaceDot(false);
+        FaceAI.ui.showError(
+          "Camera disconnected. Please reconnect and try again.",
+        );
+        FaceAI.state.set("IDLE");
+      };
+    }
   }
 
   function handleCameraError(error) {
