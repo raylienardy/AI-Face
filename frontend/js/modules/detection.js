@@ -1,17 +1,10 @@
 /**
- * FaceAI Detection Module
- * Version: 0.1 – Milestone 4 Phase 4.3
- *
- * - Real‑time face detection via MediaPipe
- * - Selects the best detection (highest confidence above threshold)
- * - Draws bounding box and updates face status indicator
+ * FaceAI Detection Module (DEBUG VERSION)
+ * Version: 0.1 – Milestone 4 Phase 4.3 debug
  */
 "use strict";
 
 FaceAI.detection = (function () {
-  // ==========================================
-  // Private State
-  // ==========================================
   let faceDetection = null;
   let initialized = false;
   let isRunning = false;
@@ -19,9 +12,6 @@ FaceAI.detection = (function () {
   let videoElement = null;
   let lastFrameTime = 0;
 
-  // ==========================================
-  // Utility: WebGL support check
-  // ==========================================
   function isWebGLSupported() {
     try {
       const canvas = document.createElement("canvas");
@@ -34,35 +24,34 @@ FaceAI.detection = (function () {
     }
   }
 
-  // ==========================================
-  // Results Callback (Phase 4.3)
-  // ==========================================
   function onResults(results) {
+    console.log("onResults called", results);
     const faces = results.detections || [];
-    const threshold = FaceAI.config.DETECTION_THRESHOLD;
+    console.log(`Number of detections: ${faces.length}`);
 
-    // Filter faces above threshold
+    // Temporary: use very low threshold to see any detection
+    const threshold = 0.1; // FaceAI.config.DETECTION_THRESHOLD;
     const validFaces = faces.filter((f) => f.score >= threshold);
 
+    console.log(`Valid faces (>= ${threshold}): ${validFaces.length}`);
+
     if (validFaces.length === 0) {
-      // No face detected
       FaceAI.ui.clearFaceBox();
       FaceAI.ui.updateFaceDot(false);
       FaceAI.state.set("DETECTING");
       return;
     }
 
-    // Pick the face with highest confidence
+    // Pick best
     let best = validFaces[0];
     for (let i = 1; i < validFaces.length; i++) {
-      if (validFaces[i].score > best.score) {
-        best = validFaces[i];
-      }
+      if (validFaces[i].score > best.score) best = validFaces[i];
     }
 
-    // Convert relative coordinates (0–100) to pixel values
     const videoW = videoElement.videoWidth;
     const videoH = videoElement.videoHeight;
+    console.log(`Video dimensions: ${videoW} x ${videoH}`);
+
     const bbox = best.boundingBox;
     const xCenter = bbox.xCenter || 0;
     const yCenter = bbox.yCenter || 0;
@@ -74,18 +63,17 @@ FaceAI.detection = (function () {
     const w = (width / 100) * videoW;
     const h = (height / 100) * videoH;
 
-    // Draw bounding box and update face status
+    console.log(
+      `Drawing box at (${x}, ${y}) size ${w}x${h} with confidence ${best.score}`,
+    );
+
     FaceAI.ui.drawFaceBox(x, y, w, h, best.score);
     FaceAI.ui.updateFaceDot(true);
     FaceAI.state.set("FACE_FOUND");
   }
 
-  // ==========================================
-  // Detection Loop (private)
-  // ==========================================
   function detectFrame() {
     if (!isRunning || !videoElement) return;
-
     const now = performance.now();
     const interval = 1000 / FaceAI.config.FPS_LIMIT;
     if (now - lastFrameTime < interval) {
@@ -93,82 +81,44 @@ FaceAI.detection = (function () {
       return;
     }
     lastFrameTime = now;
-
     try {
       faceDetection.send({ image: videoElement });
     } catch (error) {
       console.warn("FaceAI: detection frame error", error);
     }
-
     animationFrameId = requestAnimationFrame(detectFrame);
   }
 
-  // ==========================================
-  // Public API
-  // ==========================================
   return {
     async init() {
-      if (initialized) {
-        console.log("FaceAI: detection already initialized.");
-        return;
-      }
-
+      if (initialized) return;
       if (!isWebGLSupported()) {
-        const msg =
-          "Your browser does not support WebGL. Face detection cannot run.";
-        FaceAI.ui.showError(msg);
-        throw new Error(msg);
+        FaceAI.ui.showError("WebGL not supported");
+        throw new Error("WebGL not supported");
       }
-
       try {
         const config = FaceAI.config;
         faceDetection = new FaceDetection({
           locateFile: (file) => `${config.DETECTION_MODEL_URL}${file}`,
         });
-
         faceDetection.setOptions({
           model: config.DETECTION_MODEL_TYPE,
-          minDetectionConfidence: config.DETECTION_THRESHOLD,
+          minDetectionConfidence: 0.1, // debug low threshold
         });
-
         faceDetection.onResults(onResults);
         await faceDetection.initialize();
         initialized = true;
-        console.log("FaceAI: FaceDetection model loaded successfully.");
+        console.log("Model loaded");
       } catch (error) {
-        let message = "Failed to initialize face detection. ";
-        if (
-          error.message &&
-          (error.message.includes("NetworkError") ||
-            error.message.includes("Failed to fetch"))
-        ) {
-          message =
-            "Failed to load face detection model. Please check your internet connection.";
-        } else if (error.message) {
-          message += error.message;
-        }
-        FaceAI.ui.showError(message);
-        throw new Error(message);
+        FaceAI.ui.showError("Failed to load model");
+        throw error;
       }
     },
-
     async start(video) {
-      if (!video) {
-        console.warn("FaceAI: cannot start detection – no video element.");
-        return;
-      }
-      if (isRunning) return;
-
-      if (!initialized) {
-        try {
-          await this.init();
-        } catch (e) {
-          return;
-        }
-      }
-
+      if (!video || isRunning) return;
+      if (!initialized) await this.init();
+      videoElement = video;
       if (video.readyState < 2) {
-        console.log("FaceAI: video not ready yet, waiting...");
         await new Promise((resolve) => {
           const onReady = () => {
             video.removeEventListener("loadeddata", onReady);
@@ -181,17 +131,13 @@ FaceAI.detection = (function () {
           }
         });
       }
-
-      videoElement = video;
       isRunning = true;
       FaceAI.state.set("DETECTING");
-      console.log("FaceAI: detection started.");
+      console.log("Detection started");
       lastFrameTime = performance.now();
       animationFrameId = requestAnimationFrame(detectFrame);
     },
-
     stop() {
-      if (!isRunning) return;
       isRunning = false;
       if (animationFrameId) {
         cancelAnimationFrame(animationFrameId);
@@ -199,9 +145,8 @@ FaceAI.detection = (function () {
       }
       videoElement = null;
       FaceAI.state.set("CAMERA_READY");
-      console.log("FaceAI: detection stopped.");
+      console.log("Detection stopped");
     },
-
     isRunning() {
       return isRunning;
     },

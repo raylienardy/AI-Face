@@ -1,9 +1,9 @@
 /**
  * FaceAI UI Module
- * Version: 0.1 – Milestone 3.5
+ * Version: 0.1 – Milestone 4 Phase 4.3
  *
  * Handles all DOM updates: placeholder, button state, status dots, error messages.
- * Drawing functions are delegated to FaceAI.drawing (drawing.js).
+ * Drawing functions delegated to FaceAI.drawing.
  */
 "use strict";
 
@@ -68,7 +68,7 @@ window.FaceAI = window.FaceAI || {};
       return ui.video;
     },
 
-    // Drawing placeholders – will be implemented in drawing.js
+    // Drawing delegation (ke drawing.js)
     drawFaceBox(x, y, width, height, confidence) {
       FaceAI.drawing.drawBox(x, y, width, height, confidence);
     },
@@ -77,28 +77,9 @@ window.FaceAI = window.FaceAI || {};
       FaceAI.drawing.clear();
     },
 
-    updateFaceDot(active) {
-      this._updateDot(e.faceDot, active);
-    },
-
-    showAlignedFace(canvas) {
-      const alignCanvas = document.getElementById("align-canvas");
-      if (!alignCanvas || !canvas) return;
-      const ctx = alignCanvas.getContext("2d");
-      alignCanvas.width = FaceAI.config.ALIGN_TARGET_SIZE;
-      alignCanvas.height = FaceAI.config.ALIGN_TARGET_SIZE;
-      ctx.clearRect(0, 0, alignCanvas.width, alignCanvas.height);
-      ctx.drawImage(canvas, 0, 0, alignCanvas.width, alignCanvas.height);
-      // Show the container
-      document.getElementById("align-preview").style.display = "flex";
-    },
-
-    hideAlignedFace() {
-      document.getElementById("align-preview").style.display = "none";
-    },
-
     // Private helper
     _updateDot(element, active) {
+      if (!element) return;
       if (active) {
         element.classList.remove("system-status__dot--inactive");
         element.classList.add("system-status__dot--active");
