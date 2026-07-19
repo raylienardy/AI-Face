@@ -1,11 +1,10 @@
 /**
  * FaceAI Detection Module
- * Version: 0.1 – Milestone 4 Phase 4.2
+ * Version: 0.1 – Milestone 4 Phase 4.3
  *
- * Responsibilities:
- * - Initialize MediaPipe FaceDetection
- * - Start / stop detection loop
- * - Placeholder callback (will be implemented in Phase 4.3)
+ * - Real‑time face detection via MediaPipe
+ * - Selects the best detection (highest confidence above threshold)
+ * - Draws bounding box and updates face status indicator
  */
 "use strict";
 
@@ -36,12 +35,49 @@ FaceAI.detection = (function () {
   }
 
   // ==========================================
-  // Placeholder callback (Phase 4.3 will fill this)
+  // Results Callback (Phase 4.3)
   // ==========================================
   function onResults(results) {
     const faces = results.detections || [];
-    console.log(`FaceAI: ${faces.length} face(s) detected`);
-    // Phase 4.3: drawing bounding box
+    const threshold = FaceAI.config.DETECTION_THRESHOLD;
+
+    // Filter faces above threshold
+    const validFaces = faces.filter((f) => f.score >= threshold);
+
+    if (validFaces.length === 0) {
+      // No face detected
+      FaceAI.ui.clearFaceBox();
+      FaceAI.ui.updateFaceDot(false);
+      FaceAI.state.set("DETECTING");
+      return;
+    }
+
+    // Pick the face with highest confidence
+    let best = validFaces[0];
+    for (let i = 1; i < validFaces.length; i++) {
+      if (validFaces[i].score > best.score) {
+        best = validFaces[i];
+      }
+    }
+
+    // Convert relative coordinates (0–100) to pixel values
+    const videoW = videoElement.videoWidth;
+    const videoH = videoElement.videoHeight;
+    const bbox = best.boundingBox;
+    const xCenter = bbox.xCenter || 0;
+    const yCenter = bbox.yCenter || 0;
+    const width = bbox.width || 0;
+    const height = bbox.height || 0;
+
+    const x = ((xCenter - width / 2) / 100) * videoW;
+    const y = ((yCenter - height / 2) / 100) * videoH;
+    const w = (width / 100) * videoW;
+    const h = (height / 100) * videoH;
+
+    // Draw bounding box and update face status
+    FaceAI.ui.drawFaceBox(x, y, w, h, best.score);
+    FaceAI.ui.updateFaceDot(true);
+    FaceAI.state.set("FACE_FOUND");
   }
 
   // ==========================================
@@ -58,8 +94,6 @@ FaceAI.detection = (function () {
     }
     lastFrameTime = now;
 
-    // Send frame to MediaPipe without awaiting (fire-and-forget)
-    // The callback onResults will be invoked when processing is done.
     try {
       faceDetection.send({ image: videoElement });
     } catch (error) {
@@ -73,9 +107,6 @@ FaceAI.detection = (function () {
   // Public API
   // ==========================================
   return {
-    /**
-     * Initialize the face detection engine.
-     */
     async init() {
       if (initialized) {
         console.log("FaceAI: detection already initialized.");
@@ -121,10 +152,6 @@ FaceAI.detection = (function () {
       }
     },
 
-    /**
-     * Start detecting faces from a video element.
-     * @param {HTMLVideoElement} video - the active video element with stream
-     */
     async start(video) {
       if (!video) {
         console.warn("FaceAI: cannot start detection – no video element.");
@@ -132,16 +159,14 @@ FaceAI.detection = (function () {
       }
       if (isRunning) return;
 
-      // Initialize if needed (just in case)
       if (!initialized) {
         try {
           await this.init();
         } catch (e) {
-          return; // error already shown
+          return;
         }
       }
 
-      // Ensure video is ready
       if (video.readyState < 2) {
         console.log("FaceAI: video not ready yet, waiting...");
         await new Promise((resolve) => {
@@ -165,9 +190,6 @@ FaceAI.detection = (function () {
       animationFrameId = requestAnimationFrame(detectFrame);
     },
 
-    /**
-     * Stop the detection loop.
-     */
     stop() {
       if (!isRunning) return;
       isRunning = false;
@@ -180,10 +202,6 @@ FaceAI.detection = (function () {
       console.log("FaceAI: detection stopped.");
     },
 
-    /**
-     * Check if detection is currently running.
-     * @returns {boolean}
-     */
     isRunning() {
       return isRunning;
     },

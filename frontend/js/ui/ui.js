@@ -73,12 +73,12 @@ window.FaceAI = window.FaceAI || {};
       FaceAI.drawing.drawBox(x, y, width, height, confidence);
     },
 
-    drawFaceBoxes(boxes) {
-      FaceAI.drawing.drawBoxes(boxes);
-    },
-
     clearFaceBox() {
       FaceAI.drawing.clear();
+    },
+
+    updateFaceDot(active) {
+      this._updateDot(e.faceDot, active);
     },
 
     showAlignedFace(canvas) {
