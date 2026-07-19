@@ -1,6 +1,11 @@
 /**
- * FaceAI Detection Module (REVISED – canvas snapshot)
- * Version: 0.1 – Milestone 4 Phase 4.3
+ * FaceAI Detection Module
+ * Version: 0.1 – Milestone 4 Phase 4.3 (final)
+ *
+ * - Menampilkan bounding box di wajah yang terdeteksi.
+ * - Untuk sementara tidak menghapus box saat confidence turun sesaat,
+ *   sehingga box terlihat stabil.
+ * - Tracking akan ditambahkan di Phase 4.4.
  */
 "use strict";
 
@@ -12,7 +17,7 @@ FaceAI.detection = (function () {
   let videoElement = null;
   let lastFrameTime = 0;
 
-  // Offscreen canvas untuk snapshot
+  // Offscreen canvas untuk snapshot video
   const snapshotCanvas = document.createElement("canvas");
   const snapshotCtx = snapshotCanvas.getContext("2d");
 
@@ -31,17 +36,16 @@ FaceAI.detection = (function () {
   function onResults(results) {
     const faces = results.detections || [];
     const threshold = FaceAI.config.DETECTION_THRESHOLD;
-
     const validFaces = faces.filter((f) => f.score >= threshold);
 
     if (validFaces.length === 0) {
-      FaceAI.ui.clearFaceBox();
+      // Jangan hapus bounding box! Biarkan kotak terakhir tetap terlihat.
       FaceAI.ui.updateFaceDot(false);
       FaceAI.state.set("DETECTING");
       return;
     }
 
-    // Pick best
+    // Pilih wajah dengan confidence tertinggi
     let best = validFaces[0];
     for (let i = 1; i < validFaces.length; i++) {
       if (validFaces[i].score > best.score) best = validFaces[i];
@@ -68,7 +72,7 @@ FaceAI.detection = (function () {
   function detectFrame() {
     if (!isRunning || !videoElement) return;
 
-    // Pastikan video sudah memiliki dimensi dan data cukup
+    // Pastikan video sudah memiliki data gambar
     if (videoElement.readyState < 3 || videoElement.videoWidth === 0) {
       animationFrameId = requestAnimationFrame(detectFrame);
       return;
@@ -82,7 +86,7 @@ FaceAI.detection = (function () {
     }
     lastFrameTime = now;
 
-    // 🔥 Ambil snapshot dari video ke canvas terlebih dahulu
+    // Ambil snapshot dari video → lebih andal
     snapshotCanvas.width = videoElement.videoWidth;
     snapshotCanvas.height = videoElement.videoHeight;
     snapshotCtx.drawImage(
@@ -118,12 +122,10 @@ FaceAI.detection = (function () {
         faceDetection = new FaceDetection({
           locateFile: (file) => `${config.DETECTION_MODEL_URL}${file}`,
         });
-
         faceDetection.setOptions({
           model: config.DETECTION_MODEL_TYPE,
           minDetectionConfidence: config.DETECTION_THRESHOLD,
         });
-
         faceDetection.onResults(onResults);
         await faceDetection.initialize();
         initialized = true;
@@ -191,6 +193,8 @@ FaceAI.detection = (function () {
         animationFrameId = null;
       }
       videoElement = null;
+      FaceAI.ui.clearFaceBox(); // hapus box saat benar‑benar berhenti
+      FaceAI.ui.updateFaceDot(false);
       FaceAI.state.set("CAMERA_READY");
       console.log("FaceAI: detection stopped.");
     },

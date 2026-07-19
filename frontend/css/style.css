@@ -1,9 +1,8 @@
 /* ===================================
    FaceAI Frontend Styles
-   Version: 0.1 – Milestone 3
+   Version: 0.1 – Milestone 4 Phase 4.3
    =================================== */
 
-/* Custom Properties (CSS Variables) */
 :root {
   --color-bg: #0f172a;
   --color-surface: #1e293b;
@@ -17,7 +16,6 @@
   --spacing: 1rem;
 }
 
-/* Base Reset */
 *,
 *::before,
 *::after {
@@ -51,7 +49,6 @@ body {
 .header__title {
   font-size: 2rem;
   font-weight: 700;
-  letter-spacing: -0.5px;
 }
 .header__version {
   font-size: 0.9rem;
@@ -63,7 +60,7 @@ body {
   margin-top: 0.3rem;
 }
 
-/* Main Container */
+/* Main */
 .main {
   width: 100%;
   max-width: 640px;
@@ -105,11 +102,10 @@ body {
   overflow: hidden;
   border: 2px dashed var(--color-inactive);
 }
-/* Fallback aspect ratio before video loads */
 .camera-preview::before {
   content: "";
   display: block;
-  padding-top: 56.25%;
+  padding-top: 56.25%; /* 16:9 placeholder */
 }
 .camera-preview video {
   position: absolute;
@@ -117,9 +113,21 @@ body {
   left: 0;
   width: 100%;
   height: 100%;
-  object-fit: cover; /* FaceAI is face-centric: crop background, maximize face area */
-  background: #000;
+  object-fit: cover;
+  z-index: 1;
 }
+
+/* ✨ Canvas overlay – position exactly over the video */
+#face-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 2; /* above video, below placeholder */
+  pointer-events: none; /* allow clicks to pass through to video/button */
+}
+
 .camera-preview__placeholder {
   position: absolute;
   top: 0;
@@ -129,7 +137,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 2;
+  z-index: 3;
   transition: opacity 0.3s;
 }
 .camera-preview__placeholder.hidden {
@@ -193,26 +201,14 @@ body {
 .btn:disabled {
   opacity: 0.4;
   cursor: not-allowed;
-  transform: none;
 }
 
-/* Camera Error Message */
+/* Camera Error */
 .camera-error {
   color: var(--color-error);
   text-align: center;
   font-size: 0.9rem;
   min-height: 1.2em;
-  margin-top: -0.5rem;
-}
-
-/* Canvas overlay for face bounding box */
-#face-canvas {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  pointer-events: none; /* biarkan click menembus ke video */
 }
 
 /* Alignment Preview */
@@ -223,11 +219,8 @@ body {
   gap: 0.3rem;
 }
 #align-canvas {
-  width: 150px;
-  height: 150px;
   border-radius: 8px;
   border: 2px solid var(--color-inactive);
-  object-fit: cover; /* maintain aspect ratio inside canvas dimensions */
 }
 .align-preview__label {
   font-size: 0.8rem;

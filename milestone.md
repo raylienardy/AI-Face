@@ -1,387 +1,680 @@
 # FaceAI Development Milestones
 
-> Versi 0.1 – Roadmap dari deteksi wajah hingga rilis v1.0  
-> Status: ⬜ Planned | 🟡 In Progress | ✅ Completed
+> **Version:** 0.1 (Architecture Revision)
+> **Development Style:** Milestone → Stage → Task
+> **Goal:** Build a modular, production-ready AI Face Analysis platform.
 
 ---
 
-## Milestone 4 — Face Detection & Alignment
-
-**Status:** ⬜ Planned
-
-### Tujuan
-
-Mendeteksi wajah secara real-time dari webcam serta menyelaraskan posisi wajah (alignment) untuk mendapatkan orientasi yang konsisten.
-
-### Teknologi
-
-- MediaPipe Face Detection (BlazeFace short‑range)
-- Canvas API (bounding box)
-
-### Deliverables
-
-- [ ] Load model AI (BlazeFace via CDN)
-- [ ] Start/Stop detection
-- [ ] Bounding box real‑time (koordinat relatif → persentase)
-- [ ] Multiple face detection (minimal threshold)
-- [ ] Confidence score untuk setiap deteksi
-- [ ] Face alignment berdasarkan 6‑titik landmark (rotasi mata)
-- [ ] Indikator status wajah pada UI (abu‑abu / hijau)
-
-### Folder yang Berubah
+# Project Flow
 
 ```
-
-frontend/
-js/
-modules/
-detection.js (baru)
-ui/
-drawing.js (update)
-core/
-state.js (tambah state DETECTING, FACE_FOUND)
-
+Open Website
+      │
+      ▼
+Camera Preview
+      │
+      ▼
+Face Detection
+      │
+      ▼
+Face Quality Check
+      │
+      ▼
+Auto Capture
+      │
+      ▼
+Freeze Image
+      │
+      ▼
+Upload to Backend
+      │
+      ▼
+Face Preprocessing
+      │
+      ▼
+AI Face Analysis
+      │
+      ▼
+Generate Report
+      │
+      ▼
+Display Results
 ```
 
-### Output
+---
 
-- Kotak pembatas muncul mengelilingi wajah yang terdeteksi.
-- Wajah terorientasi tegak (alignment aktif).
-- Indikator `Face` berubah hijau saat wajah terdeteksi.
+# Milestone 1 — Project Foundation
 
-### Catatan Teknis
+**Status:** ✅ Completed
 
-- BlazeFace menyediakan landmark mata sehingga rotasi dapat dihitung tanpa detektor tambahan (berdasarkan pengalaman DeepFace: alignment +6% akurasi).
-- Gunakan `object-fit: cover` pada video karena FaceAI berfokus pada wajah, bukan latar belakang.
-- Threshold confidence default 0.5; dapat disesuaikan di `config.js`.
+## Objective
+
+Membangun pondasi proyek.
+
+## Deliverables
+
+- Project Structure
+- Frontend Setup
+- Backend Setup
+- Configuration
+- Logger
+- State Manager
+- Development Environment
+
+## Output
+
+Project dapat dijalankan.
 
 ---
 
-## Milestone 5 — Face Quality Assessment
+# Milestone 2 — Camera System
 
-**Status:** ⬜ Planned
+**Status:** ✅ Completed
 
-### Tujuan
+## Objective
 
-Menentukan apakah kualitas wajah yang terdeteksi memenuhi syarat untuk di‑capture.
+Mengakses webcam pengguna.
 
-### Parameter yang Dicek
+## Deliverables
 
-- Posisi wajah (center of frame)
-- Ukuran wajah (min/maks persentase dari tinggi frame)
-- Rotasi kepala (sudut yaw/pitch kasar dari landmark)
-- Blur detection (Laplacian variance)
-- Pencahayaan (rata‑rata brightness)
-- Stabilitas (perubahan posisi antar frame)
+- Camera Permission
+- Camera Preview
+- Start Camera
+- Stop Camera
+- Camera Status
+- Error Handling
 
-### Deliverables
+## Output
 
-- [ ] Module `quality.js` berisi fungsi evaluasi
-- [ ] Indikator real‑time: posisi, ukuran, blur, cahaya
-- [ ] Feedback visual langsung di UI (ikon warning/check)
-- [ ] State transisi: `FACE_STABLE` → `READY_TO_CAPTURE`
+Preview kamera muncul.
 
-### Folder yang Berubah
+---
+
+# Milestone 3 — Application State
+
+**Status:** ✅ Completed
+
+## Objective
+
+Mengatur seluruh lifecycle aplikasi.
+
+## States
 
 ```
+IDLE
 
-frontend/
-js/
-modules/
-quality.js (baru)
-ui/
-ui.js (tambah elemen feedback)
-core/
-state.js (tambah state baru)
+↓
 
+CAMERA_READY
+
+↓
+
+DETECTING
+
+↓
+
+FACE_FOUND
+
+↓
+
+FACE_READY
+
+↓
+
+CAPTURING
+
+↓
+
+PROCESSING
+
+↓
+
+RESULT_READY
+
+↓
+
+ERROR
 ```
 
-### Output
+## Output
 
-Sistem dapat memberi tahu pengguna kapan wajah sudah ideal untuk pengambilan gambar.
-
-### Catatan Teknis
-
-- Blur detection dengan varian Laplacian (>100 dianggap tajam, berdasarkan eksperimen MEBeauty/face-rating).
-- Pencahayaan minimum 80 (dari 255) untuk menghindari underexposure.
-- Toleransi kemiringan ≤15° agar embedding konsisten.
+Seluruh aplikasi memiliki alur yang jelas.
 
 ---
 
-## Milestone 6 — Auto Capture
+# Milestone 4 — Face Detection
 
 **Status:** ⬜ Planned
 
-### Tujuan
+## Objective
 
-Mengambil gambar secara otomatis begitu kualitas wajah dinyatakan ideal.
+Mendeteksi keberadaan wajah secara real-time.
 
-### Deliverables
+> **Catatan**
+>
+> Milestone ini **TIDAK melakukan beauty analysis**.
+> Hanya memastikan ada wajah yang valid.
 
-- [ ] Countdown timer (3 detik, tampil di UI)
-- [ ] Auto capture saat countdown selesai
-- [ ] Cancel countdown jika kualitas turun
-- [ ] Snapshot dari video (canvas → data URL)
-- [ ] Preview hasil capture (overlay)
-- [ ] Tombol retake / save
+## Technology
 
-### Folder yang Berubah
+- MediaPipe Face Detection (BlazeFace)
+- Canvas API
+
+## Deliverables
+
+- Load AI Model
+- Start Detection
+- Stop Detection
+- Single Face Detection
+- Multiple Face Detection
+- Select Primary Face
+- Bounding Box
+- Confidence Score
+- Face Status Indicator
+
+## Output
+
+Browser mampu mengetahui apakah wajah ada atau tidak.
+
+---
+
+# Milestone 5 — Face Quality Assessment
+
+**Status:** ⬜ Planned
+
+## Objective
+
+Menentukan apakah wajah sudah layak difoto.
+
+## Quality Checks
+
+### Face Position
+
+- Centered
+- Not Too High
+- Not Too Low
+
+### Face Size
+
+- Too Small
+- Good
+- Too Close
+
+### Lighting
+
+- Too Dark
+- Good
+- Too Bright
+
+### Blur
+
+- Sharp
+- Blurry
+
+### Stability
+
+- Stable
+- Moving
+
+### Visibility
+
+- Eyes Visible
+- Nose Visible
+- Mouth Visible
+
+## Deliverables
+
+- Quality Module
+- Live Feedback
+- Quality Indicator
+- Ready Status
+
+## Output
+
+Jika seluruh syarat terpenuhi
 
 ```
-
-frontend/
-js/
-modules/
-capture.js (baru)
-ui/
-ui.js (tambah preview & countdown)
-
+READY TO CAPTURE
 ```
 
-### Output
-
-Pengguna tidak perlu menekan tombol capture; sistem melakukannya otomatis.
-
-### Catatan Teknis
-
-- Gunakan `ctx.drawImage(video, 0, 0)` pada canvas tersembunyi untuk mengambil frame resolusi asli.
-- Countdown harus dibatalkan jika wajah tidak stabil (gerakan > threshold) atau metrik lain turun di bawah ambang.
+akan aktif.
 
 ---
 
-## Milestone 7 — Backend Integration
+# Milestone 6 — Auto Capture
 
 **Status:** ⬜ Planned
 
-### Tujuan
+## Objective
 
-Menghubungkan frontend dengan backend FastAPI.
+Mengambil foto secara otomatis ketika kualitas wajah sudah memenuhi syarat.
 
-### Deliverables
+## Deliverables
 
-- [ ] Endpoint `/health` (sudah ada)
-- [ ] Endpoint `POST /api/upload` terima gambar (multipart)
-- [ ] Koneksi dari frontend (`fetch` / `axios`)
-- [ ] JSON response standar (`{ status, data, error }`)
-- [ ] Error handling (network error, timeout, server error)
+- Countdown
+- Auto Capture
+- Cancel Countdown
+- Freeze Frame
+- Preview Image
+- Retake Button
+- Continue Button
 
-### Folder yang Berubah
+## Output
+
+Foto terbaik berhasil diambil.
+
+---
+
+# Milestone 7 — Backend Integration
+
+**Status:** ⬜ Planned
+
+## Objective
+
+Mengirim hasil capture ke backend.
+
+## Deliverables
+
+- Upload API
+- Multipart Upload
+- Progress Indicator
+- Error Handling
+- Response Handling
+
+## Output
+
+Backend menerima gambar wajah.
+
+---
+
+# Milestone 8 — Face Preprocessing
+
+**Status:** ⬜ Planned
+
+## Objective
+
+Melakukan preprocessing sebelum AI menganalisa wajah.
+
+> **Semua proses dilakukan di Backend.**
+
+## Pipeline
 
 ```
+Image
 
-backend/
-app/
-api/
-upload.py (baru)
-frontend/
-js/
-core/
-api.js (baru)
+↓
 
+Face Detection
+
+↓
+
+Face Alignment
+
+↓
+
+Crop Face
+
+↓
+
+Resize
+
+↓
+
+Normalize
+
+↓
+
+Ready For AI
 ```
 
-### Output
+## Deliverables
 
-Frontend dapat mengirimkan gambar wajah ke backend dan menerima respons.
+- Face Detection
+- Face Alignment
+- Face Crop
+- Face Resize
+- Face Normalization
+- Quality Validation
 
----
+## Output
 
-## Milestone 8 — Face Registration
-
-**Status:** ⬜ Planned
-
-### Tujuan
-
-Mendaftarkan identitas pengguna beserta gambar wajah ke dalam dataset.
-
-### Deliverables
-
-- [ ] Form input nama (frontend)
-- [ ] Kirim gambar + nama ke backend
-- [ ] Backend: simpan metadata (JSON) + gambar di `datasets/person_xxxx/`
-- [ ] Generate ID unik (`person_000001`, …)
-- [ ] Response berisi ID & status sukses
-
-### Backend
-
-FastAPI, SQLite (opsional untuk indeks), file system untuk gambar.
-
-### Output
-
-Dataset wajah mulai terbentuk dengan struktur yang terorganisir.
-
-### Catatan Teknis
-
-- Struktur dataset mengikuti SDD: `person_id/capture_xxx.jpg` + `metadata.json`.
-- Metadata mencakup timestamp, kualitas capture, kondisi pencahayaan, dll.
+Satu gambar wajah yang sudah siap diproses AI.
 
 ---
 
-## Milestone 9 — Face Recognition
+# Milestone 9 — AI Face Analysis
 
 **Status:** ⬜ Planned
 
-### Tujuan
+## Objective
 
-Mengenali identitas seseorang dengan membandingkan embedding wajah.
+Melakukan analisa wajah menggunakan AI.
 
-### AI
+## AI Modules
 
-Backend: InsightFace (buffalo_l) atau DeepFace (VGG‑Face) → ekstraksi embedding 512‑d / 4096‑d.
+### Face Structure
 
-### Deliverables
+- Face Shape
+- Facial Harmony
+- Facial Symmetry
 
-- [ ] Ekstraksi embedding wajah (backend)
-- [ ] Simpan embedding ke database / file
-- [ ] Bandingkan embedding (cosine, euclidean)
-- [ ] Pre‑tuned threshold per metrik
-- [ ] Confidence scoring (0–100) menggunakan regresi logistik (opsional)
-- [ ] Return prediksi: nama, similarity, confidence
+### Eyes
 
-### Folder yang Berubah
+- Eye Shape
+- Eye Spacing
+- Eye Size
+
+### Eyebrows
+
+- Brow Shape
+- Brow Thickness
+- Brow Position
+
+### Nose
+
+- Nose Width
+- Nose Length
+- Nose Balance
+
+### Lips
+
+- Lip Shape
+- Lip Fullness
+- Lip Symmetry
+
+### Jaw
+
+- Jawline
+- Chin
+- Mandible
+
+### Cheek
+
+- Cheekbones
+- Midface
+
+### Skin
+
+- Skin Quality
+- Skin Texture
+- Skin Tone
+
+### Hair
+
+- Hairline
+- Hair Coverage
+
+### Overall
+
+- Overall Attractiveness
+- Confidence Score
+
+## Deliverables
+
+- AI Prediction
+- Feature Scores
+- Overall Score
+
+## Output
+
+Semua skor wajah berhasil dihitung.
+
+---
+
+# Milestone 10 — AI Report Generator
+
+**Status:** ⬜ Planned
+
+## Objective
+
+Mengubah hasil AI menjadi laporan yang mudah dipahami.
+
+## Report Contents
+
+### Overall Score
+
+Contoh
 
 ```
-
-backend/
-app/
-services/
-recognition.py (baru)
-models/ (tempat model InsightFace)
-
+87.4 / 100
 ```
 
-### Output
+---
 
-Sistem dapat mengenali pengguna yang sudah terdaftar.
+### Feature Scores
 
-### Catatan Teknis
-
-- Pipeline recognition mengadopsi DeepFace: detect → align → normalize → embed → distance → threshold → confidence.
-- L2 normalization embedding wajib agar jarak euclidean valid.
-- Confidence score memudahkan pengguna memahami tingkat keyakinan.
+- Eyes
+- Brows
+- Nose
+- Lips
+- Jawline
+- Skin
+- Hair
+- Cheekbones
+- Facial Harmony
+- Facial Symmetry
 
 ---
 
-## Milestone 10 — Dataset Management
+### Strengths
 
-**Status:** ⬜ Planned
+Contoh
 
-### Tujuan
-
-Mengelola dataset wajah (tambah, hapus, sunting, cari).
-
-### Deliverables
-
-- [ ] API list semua person
-- [ ] API get detail person (metadata + gambar)
-- [ ] API hapus person
-- [ ] API rename person
-- [ ] API search by name
-- [ ] Dataset statistics (jumlah person, total gambar)
-
-### Output
-
-Admin atau developer dapat mengelola dataset dengan mudah.
+- Strong Jawline
+- Balanced Face
+- Symmetrical Eyes
 
 ---
 
-## Milestone 11 — UI Polish
+### Improvement Suggestions
 
-**Status:** ⬜ Planned
+Contoh
 
-### Tujuan
-
-Meningkatkan kualitas antarmuka agar terlihat profesional.
-
-### Deliverables
-
-- [ ] Layout responsif (mobile‑friendly)
-- [ ] Tipografi lebih baik (ukuran, spacing)
-- [ ] Warna konsisten (palette modern)
-- [ ] Animasi loading, sukses, error
-- [ ] Empty state (belum ada data, belum ada wajah)
-- [ ] Pesan error yang informatif
-- [ ] Tampilan preview capture lebih halus
-
-### Output
-
-Aplikasi terlihat layak untuk demo atau portofolio.
+- Improve Lighting
+- Better Hairstyle
+- Smile Naturally
 
 ---
 
-## Milestone 12 — Performance Optimization
+### Confidence
 
-**Status:** ⬜ Planned
+Contoh
 
-### Tujuan
+```
+96%
+```
 
-Memastikan aplikasi berjalan ringan dan stabil.
+## Output
 
-### Deliverables
-
-- [ ] Batasi FPS deteksi (pakai `DETECTION_INTERVAL_MS`)
-- [ ] Optimasi canvas (hapus dan gambar ulang hanya jika perlu)
-- [ ] Memory leak check (hentikan stream saat tidak aktif)
-- [ ] Lazy loading model (muat hanya setelah izin kamera)
-- [ ] Cache model (hindari unduh berulang)
-
-### Output
-
-Aplikasi berjalan stabil tanpa lag, bahkan di laptop menengah.
+Laporan analisa wajah selesai.
 
 ---
 
-## Milestone 13 — Documentation
+# Milestone 11 — History & Dataset
 
 **Status:** ⬜ Planned
 
-### Tujuan
+## Objective
 
-Melengkapi dokumentasi teknis agar proyek mudah dipahami dan dikembangkan.
+Menyimpan seluruh hasil analisa.
 
-### Deliverables
+## Deliverables
 
-- [ ] `README.md` (deskripsi, setup, penggunaan)
-- [ ] `ARCHITECTURE.md` (diagram, alur data)
-- [ ] `API.md` (daftar endpoint, request/response)
-- [ ] `PROJECT_STRUCTURE.md`
-- [ ] `ENVIRONMENT.md` (cara setup environment)
-- [ ] Panduan developer (how to contribute)
+- Save Report
+- Save Image
+- History
+- Search
+- Delete
+- Export
 
-### Output
+## Output
 
-Developer baru dapat menjalankan dan mengembangkan FaceAI dalam waktu singkat.
+Riwayat analisa tersedia.
 
 ---
 
-## Milestone 14 — Release v1.0
+# Milestone 12 — UI & Performance
 
 **Status:** ⬜ Planned
 
-### Tujuan
+## Objective
 
-Menyiapkan rilis stabil pertama.
+Meningkatkan pengalaman pengguna.
 
-### Deliverables
+## UI
 
-- [ ] Bug fixing (semua issue yang diketahui)
-- [ ] Code cleanup (hapus console.log, komentar tidak perlu)
-- [ ] Final testing (semua milestone terintegrasi)
-- [ ] Git tag `v1.0.0`
-- [ ] Release notes (fitur, perbaikan)
-- [ ] Demo video / screenshot
+- Responsive
+- Better Typography
+- Better Animation
+- Better Loading
+- Better Empty State
+- Better Error Message
 
-### Output
+## Performance
+
+- Lazy Loading
+- Camera Optimization
+- Detection Optimization
+- Memory Optimization
+- Cache
+
+## Output
+
+Aplikasi terasa ringan.
+
+---
+
+# Milestone 13 — Documentation
+
+**Status:** ⬜ Planned
+
+## Objective
+
+Melengkapi dokumentasi proyek.
+
+## Deliverables
+
+- README
+- Architecture
+- API
+- Folder Structure
+- Setup Guide
+- Developer Guide
+
+## Output
+
+Developer lain dapat menjalankan proyek dengan mudah.
+
+---
+
+# Milestone 14 — Release v1.0
+
+**Status:** ⬜ Planned
+
+## Objective
+
+Merilis FaceAI versi stabil pertama.
+
+## Deliverables
+
+- Final Testing
+- Bug Fixing
+- Performance Check
+- Release Notes
+- Demo Video
+- Git Tag
+
+## Output
 
 FaceAI v1.0 siap dipublikasikan.
 
 ---
 
-## Referensi Teknis
+# AI Pipeline (Backend)
 
-Seluruh keputusan di atas didasari oleh pembelajaran dari tiga repositori yang telah dianalisis:
+```
+Captured Image
+        │
+        ▼
+Face Detection
+        │
+        ▼
+Face Alignment
+        │
+        ▼
+Face Crop
+        │
+        ▼
+Resize
+        │
+        ▼
+Normalization
+        │
+        ▼
+AI Feature Extraction
+        │
+        ▼
+Beauty Prediction
+        │
+        ▼
+Feature Scoring
+        │
+        ▼
+Report Generation
+```
 
-1. **Facial Beauty Prediction** – Penggunaan EMD loss, distribusi rating, backbone pretrained.
-2. **face-rating** – Feature engineering geometris (rasio landmark), PCA+SVR, CNN regresi.
-3. **MEBeauty** – Multi‑ethnic dataset, pipeline crop+align, ekstraksi embedding FaceNet, bug normalisasi.
-4. **DeepFace** – Blueprint face recognition lengkap: deteksi, alignment, normalisasi, threshold tuning, confidence calibration.
+---
+
+# Final User Flow
+
+```
+Website
+
+↓
+
+Camera Preview
+
+↓
+
+Face Detected
+
+↓
+
+Quality Check
+
+↓
+
+Auto Capture
+
+↓
+
+Freeze Image
+
+↓
+
+Upload
+
+↓
+
+AI Analysis
+
+↓
+
+Generate Report
+
+↓
+
+Show Result
+```
+
+---
+
+# Design Principles
+
+- Frontend hanya bertugas membantu pengguna mendapatkan foto terbaik.
+- Seluruh proses AI dilakukan setelah gambar berhasil di-capture.
+- Tidak ada beauty analysis secara real-time.
+- Seluruh preprocessing dilakukan di backend agar konsisten dengan proses training model.
+- Arsitektur dibuat modular sehingga model AI dapat diganti tanpa mengubah frontend.
+- Roadmap mengadopsi praktik terbaik dari DeepFace, MEBeauty, Facial Beauty Prediction, dan face-rating, namun disesuaikan dengan kebutuhan FaceAI.
