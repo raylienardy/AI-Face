@@ -1,11 +1,11 @@
 /**
  * FaceAI Detection Module
- * Version: 0.1 – Milestone 4 Phase 4.1
+ * Version: 0.1 – Milestone 4 Phase 4.2
  *
  * Responsibilities:
- * - Initialize MediaPipe FaceDetection (BlazeFace)
- * - Verify WebGL support
- * - Provide init() / start() / stop() placeholders
+ * - Initialize MediaPipe FaceDetection
+ * - Start / stop detection loop
+ * - Placeholder callback (will be implemented in Phase 4.3)
  */
 "use strict";
 
@@ -13,11 +13,11 @@ FaceAI.detection = (function () {
   // ==========================================
   // Private State
   // ==========================================
-  let faceDetection = null; // MediaPipe instance
-  let initialized = false; // true after successful init()
+  let faceDetection = null;
+  let initialized = false;
   let isRunning = false;
-  let videoElement = null;
   let animationFrameId = null;
+  let videoElement = null;
   let lastFrameTime = 0;
 
   // ==========================================
@@ -36,19 +36,36 @@ FaceAI.detection = (function () {
   }
 
   // ==========================================
-  // Callback (placeholder untuk Phase 4.3)
+  // Placeholder callback (Phase 4.3 will fill this)
   // ==========================================
   function onResults(results) {
-    // Akan diisi nanti
-    console.log("onResults called", results);
+    const faces = results.detections || [];
+    console.log(`FaceAI: ${faces.length} face(s) detected`);
+    // Phase 4.3: drawing bounding box
   }
 
   // ==========================================
-  // Detection Loop (placeholder)
+  // Detection Loop (private)
   // ==========================================
-  async function detectFrame(now) {
+  function detectFrame() {
     if (!isRunning || !videoElement) return;
-    // throttle (opsional, akan diimplementasikan penuh nanti)
+
+    const now = performance.now();
+    const interval = 1000 / FaceAI.config.FPS_LIMIT;
+    if (now - lastFrameTime < interval) {
+      animationFrameId = requestAnimationFrame(detectFrame);
+      return;
+    }
+    lastFrameTime = now;
+
+    // Send frame to MediaPipe without awaiting (fire-and-forget)
+    // The callback onResults will be invoked when processing is done.
+    try {
+      faceDetection.send({ image: videoElement });
+    } catch (error) {
+      console.warn("FaceAI: detection frame error", error);
+    }
+
     animationFrameId = requestAnimationFrame(detectFrame);
   }
 
@@ -58,8 +75,6 @@ FaceAI.detection = (function () {
   return {
     /**
      * Initialize the face detection engine.
-     * Must be called once before start().
-     * @returns {Promise<void>} resolves when model is ready, rejects on error.
      */
     async init() {
       if (initialized) {
@@ -67,7 +82,6 @@ FaceAI.detection = (function () {
         return;
       }
 
-      // 1. Check WebGL
       if (!isWebGLSupported()) {
         const msg =
           "Your browser does not support WebGL. Face detection cannot run.";
@@ -76,30 +90,26 @@ FaceAI.detection = (function () {
       }
 
       try {
-        // 2. Create FaceDetection instance
         const config = FaceAI.config;
         faceDetection = new FaceDetection({
           locateFile: (file) => `${config.DETECTION_MODEL_URL}${file}`,
         });
 
-        // 3. Set options (no outputLandmarks – we don't need landmarks on frontend)
         faceDetection.setOptions({
-          model: config.DETECTION_MODEL_TYPE, // 'short'
-          minDetectionConfidence: config.DETECTION_THRESHOLD, // 0.5
+          model: config.DETECTION_MODEL_TYPE,
+          minDetectionConfidence: config.DETECTION_THRESHOLD,
         });
 
-        // 4. Register callback (will be filled later)
         faceDetection.onResults(onResults);
-
-        // 5. Load model
         await faceDetection.initialize();
         initialized = true;
         console.log("FaceAI: FaceDetection model loaded successfully.");
       } catch (error) {
         let message = "Failed to initialize face detection. ";
         if (
-          (error.message && error.message.includes("NetworkError")) ||
-          (error.message && error.message.includes("Failed to fetch"))
+          error.message &&
+          (error.message.includes("NetworkError") ||
+            error.message.includes("Failed to fetch"))
         ) {
           message =
             "Failed to load face detection model. Please check your internet connection.";
@@ -112,25 +122,66 @@ FaceAI.detection = (function () {
     },
 
     /**
-     * Start detection loop (Placeholder – will be implemented in Phase 4.2)
+     * Start detecting faces from a video element.
+     * @param {HTMLVideoElement} video - the active video element with stream
      */
-    start() {
-      if (!initialized) {
-        console.warn("FaceAI: detection not initialized yet.");
+    async start(video) {
+      if (!video) {
+        console.warn("FaceAI: cannot start detection – no video element.");
         return;
       }
-      // TODO: Phase 4.2
+      if (isRunning) return;
+
+      // Initialize if needed (just in case)
+      if (!initialized) {
+        try {
+          await this.init();
+        } catch (e) {
+          return; // error already shown
+        }
+      }
+
+      // Ensure video is ready
+      if (video.readyState < 2) {
+        console.log("FaceAI: video not ready yet, waiting...");
+        await new Promise((resolve) => {
+          const onReady = () => {
+            video.removeEventListener("loadeddata", onReady);
+            resolve();
+          };
+          video.addEventListener("loadeddata", onReady);
+          if (video.readyState >= 2) {
+            video.removeEventListener("loadeddata", onReady);
+            resolve();
+          }
+        });
+      }
+
+      videoElement = video;
+      isRunning = true;
+      FaceAI.state.set("DETECTING");
+      console.log("FaceAI: detection started.");
+      lastFrameTime = performance.now();
+      animationFrameId = requestAnimationFrame(detectFrame);
     },
 
     /**
-     * Stop detection loop (Placeholder)
+     * Stop the detection loop.
      */
     stop() {
-      // TODO: Phase 4.2
+      if (!isRunning) return;
+      isRunning = false;
+      if (animationFrameId) {
+        cancelAnimationFrame(animationFrameId);
+        animationFrameId = null;
+      }
+      videoElement = null;
+      FaceAI.state.set("CAMERA_READY");
+      console.log("FaceAI: detection stopped.");
     },
 
     /**
-     * Check if detection is running.
+     * Check if detection is currently running.
      * @returns {boolean}
      */
     isRunning() {
