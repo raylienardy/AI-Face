@@ -115,8 +115,10 @@ python -m venv .venv
 # Aktifkan virtual environment
 # Windows PowerShell
 .\.venv\Scripts\Activate.ps1
-# Git Bash / Linux / Mac
+# Linux / Mac
 source .venv/bin/activate
+# Git Bash
+source .venv/Scripts/Activate
 
 # Install dependency
 pip install -r requirements.txt

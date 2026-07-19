@@ -73,6 +73,10 @@ window.FaceAI = window.FaceAI || {};
       FaceAI.drawing.drawBox(x, y, width, height, confidence);
     },
 
+    drawFaceBoxes(boxes) {
+      FaceAI.drawing.drawBoxes(boxes);
+    },
+
     clearFaceBox() {
       FaceAI.drawing.clear();
     },

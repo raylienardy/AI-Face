@@ -1,11 +1,11 @@
 /**
  * FaceAI Detection Module
- * Version: 0.1 – Milestone 4 Stage 4.3
+ * Version: 0.1 – Milestone 4 Stage 4.4
  *
  * Responsibilities:
  * - Real-time face detection via MediaPipe
- * - Extract bounding box & confidence
- * - Update UI and state
+ * - Primary face selection (largest area / highest confidence)
+ * - Multi-face awareness & visual distinction
  */
 "use strict";
 
@@ -19,7 +19,7 @@ FaceAI.detection = (function () {
   let animationFrameId = null;
   let videoElement = null;
   let lastFrameTime = 0;
-  let pendingStart = false;
+  let multipleFaces = false;
 
   // ==========================================
   // Utility: WebGL support check
@@ -59,29 +59,44 @@ FaceAI.detection = (function () {
   }
 
   // ==========================================
-  // Results Callback (Stage 4.3)
+  // Results Callback (Stage 4.4)
   // ==========================================
   function onResults(results) {
     const faces = results.detections || [];
     const threshold = FaceAI.config.DETECTION_THRESHOLD;
 
-    // Find the best detection (highest confidence above threshold)
-    let bestFace = null;
-    let bestConfidence = 0;
+    // Filter faces above threshold
+    const validFaces = faces.filter((f) => f.score >= threshold);
 
-    for (const face of faces) {
-      const score = face.score || 0;
-      if (score > threshold && score > bestConfidence) {
-        bestConfidence = score;
-        bestFace = face;
-      }
+    if (validFaces.length === 0) {
+      FaceAI.ui.clearFaceBox();
+      FaceAI.ui.updateFaceDot(false);
+      FaceAI.state.set("DETECTING");
+      multipleFaces = false;
+      return;
     }
 
-    if (bestFace) {
-      // Convert relative coordinates (0-100) to pixel values
-      const videoW = videoElement.videoWidth;
-      const videoH = videoElement.videoHeight;
-      const bbox = bestFace.boundingBox;
+    // Sort faces according to primary criteria
+    const criteria = FaceAI.config.PRIMARY_FACE_CRITERIA;
+    validFaces.sort((a, b) => {
+      if (criteria === "area") {
+        const areaA = (a.boundingBox.width || 0) * (a.boundingBox.height || 0);
+        const areaB = (b.boundingBox.width || 0) * (b.boundingBox.height || 0);
+        if (areaA !== areaB) return areaB - areaA; // descending
+      }
+      // fallback to confidence
+      return (b.score || 0) - (a.score || 0);
+    });
+
+    multipleFaces = validFaces.length > 1;
+
+    // Build array of box objects for drawing
+    const videoW = videoElement.videoWidth;
+    const videoH = videoElement.videoHeight;
+    const boxes = [];
+
+    validFaces.forEach((face, index) => {
+      const bbox = face.boundingBox;
       const xCenter = bbox.xCenter || 0;
       const yCenter = bbox.yCenter || 0;
       const width = bbox.width || 0;
@@ -92,15 +107,26 @@ FaceAI.detection = (function () {
       const w = (width / 100) * videoW;
       const h = (height / 100) * videoH;
 
-      FaceAI.ui.drawFaceBox(x, y, w, h, bestConfidence);
-      FaceAI.ui.updateFaceDot(true);
-      FaceAI.state.set("FACE_FOUND");
-    } else {
-      // No face found
-      FaceAI.ui.clearFaceBox();
-      FaceAI.ui.updateFaceDot(false);
-      FaceAI.state.set("DETECTING");
-    }
+      const isPrimary = index === 0;
+      const config = FaceAI.config;
+
+      boxes.push({
+        x,
+        y,
+        w,
+        h,
+        confidence: face.score,
+        color: isPrimary ? config.BOX_COLOR : config.SECONDARY_BOX_COLOR,
+        lineWidth: isPrimary
+          ? config.BOX_LINE_WIDTH
+          : config.SECONDARY_BOX_LINE_WIDTH,
+        showConfidence: isPrimary, // only primary shows confidence text
+      });
+    });
+
+    FaceAI.ui.drawFaceBoxes(boxes);
+    FaceAI.ui.updateFaceDot(true);
+    FaceAI.state.set("FACE_FOUND"); // state indicates at least one valid face
   }
 
   // ==========================================
@@ -149,21 +175,13 @@ FaceAI.detection = (function () {
       }
     },
 
-    /**
-     * Start detecting faces from a video element.
-     * If video is not yet ready, wait for 'loadeddata' event.
-     * @param {HTMLVideoElement} video
-     * @returns {Promise<void>}
-     */
     async start(video) {
       if (!video) {
         console.warn("FaceAI: cannot start detection – no video element.");
         return;
       }
-
       if (isRunning) return;
 
-      // Initialize model if needed
       if (!initialized) {
         try {
           await this.init();
@@ -172,40 +190,32 @@ FaceAI.detection = (function () {
         }
       }
 
-      // Store reference
       videoElement = video;
 
-      // Wait until video is ready
       if (video.readyState < 2) {
         console.log("FaceAI: video not ready yet, waiting...");
-        pendingStart = true;
         await new Promise((resolve) => {
           const onReady = () => {
             video.removeEventListener("loadeddata", onReady);
-            pendingStart = false;
             resolve();
           };
           video.addEventListener("loadeddata", onReady);
-          // Fallback: if already ready in the meantime (e.g., event fired synchronously)
           if (video.readyState >= 2) {
             video.removeEventListener("loadeddata", onReady);
-            pendingStart = false;
             resolve();
           }
         });
       }
 
-      // Now safe to start
       isRunning = true;
       FaceAI.state.set("DETECTING");
       console.log("FaceAI: detection started.");
-      lastFrameTime = performance.now(); // reset timer
+      lastFrameTime = performance.now();
       animationFrameId = requestAnimationFrame(detectFrame);
     },
 
     stop() {
       if (!isRunning) return;
-
       isRunning = false;
       if (animationFrameId) {
         cancelAnimationFrame(animationFrameId);
@@ -218,6 +228,14 @@ FaceAI.detection = (function () {
 
     isRunning() {
       return isRunning;
+    },
+
+    /**
+     * Check if multiple faces are currently detected.
+     * @returns {boolean}
+     */
+    hasMultipleFaces() {
+      return multipleFaces;
     },
   };
 })();

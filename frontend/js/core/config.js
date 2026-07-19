@@ -35,4 +35,9 @@ FaceAI.config = {
 
   // i18n
   DEFAULT_LANGUAGE: "en",
+
+  // Detection & Face Selection (Stage 4.4)
+  PRIMARY_FACE_CRITERIA: "area", // 'area' or 'confidence'
+  SECONDARY_BOX_COLOR: "#9ca3af", // gray-400
+  SECONDARY_BOX_LINE_WIDTH: 2,
 };
