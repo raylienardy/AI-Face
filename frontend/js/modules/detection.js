@@ -1,11 +1,12 @@
 /**
  * FaceAI Detection Module
- * Version: 0.1 – Milestone 4 Stage 4.2
+ * Version: 0.1 – Milestone 4 Stage 4.3
  *
  * Responsibilities:
- * - Verify WebGL & load BlazeFace model (Stage 4.1)
- * - Start/stop real-time detection loop (Stage 4.2)
- * - Throttle FPS, handle video readiness, manage state machine
+ * - Load BlazeFace model (4.1)
+ * - Real‑time detection loop (4.2)
+ * - Single face bounding box + confidence (4.3)
+ * - State machine integration
  */
 "use strict";
 
@@ -13,12 +14,12 @@ FaceAI.detection = (function () {
   // ==========================================
   // Private State
   // ==========================================
-  let faceDetection = null; // MediaPipe instance
-  let initialized = false; // init() completed
-  let isRunning = false; // loop active
-  let animationFrameId = null; // rAF handle
-  let videoElement = null; // reference to <video>
-  let lastFrameTime = 0; // for FPS throttle
+  let faceDetection = null;
+  let initialized = false;
+  let isRunning = false;
+  let animationFrameId = null;
+  let videoElement = null;
+  let lastFrameTime = 0;
 
   // ==========================================
   // Utility: WebGL support check
@@ -41,7 +42,6 @@ FaceAI.detection = (function () {
   function detectFrame(now) {
     if (!isRunning || !videoElement) return;
 
-    // Throttle to configured FPS
     const interval = 1000 / FaceAI.config.FPS_LIMIT;
     if (now - lastFrameTime < interval) {
       animationFrameId = requestAnimationFrame(detectFrame);
@@ -49,7 +49,7 @@ FaceAI.detection = (function () {
     }
     lastFrameTime = now;
 
-    // Send frame to MediaPipe – NO await, so loop doesn't block
+    // Send frame without blocking the loop
     faceDetection.send({ image: videoElement }).catch((error) => {
       console.warn("FaceAI: detection send error", error);
     });
@@ -58,13 +58,48 @@ FaceAI.detection = (function () {
   }
 
   // ==========================================
-  // Results Callback (will be implemented in Stage 4.3)
+  // Results Callback (Stage 4.3)
   // ==========================================
   function onResults(results) {
-    // Placeholder: just log the number of faces
     const faces = results.detections || [];
-    if (faces.length > 0) {
-      console.log(`FaceAI: ${faces.length} face(s) detected`);
+    const threshold = FaceAI.config.DETECTION_THRESHOLD;
+
+    // Find detection with highest confidence above threshold
+    let bestFace = null;
+    let bestConfidence = 0;
+
+    for (const face of faces) {
+      const score = face.score || 0;
+      if (score >= threshold && score > bestConfidence) {
+        bestConfidence = score;
+        bestFace = face;
+      }
+    }
+
+    if (bestFace) {
+      const bbox = bestFace.boundingBox;
+      // Convert relative coordinates (0-100) to pixel values
+      const vw = videoElement.videoWidth;
+      const vh = videoElement.videoHeight;
+      const xCenter = bbox.xCenter || 0;
+      const yCenter = bbox.yCenter || 0;
+      const width = bbox.width || 0;
+      const height = bbox.height || 0;
+
+      const x = ((xCenter - width / 2) / 100) * vw;
+      const y = ((yCenter - height / 2) / 100) * vh;
+      const w = (width / 100) * vw;
+      const h = (height / 100) * vh;
+
+      // Draw on canvas overlay
+      FaceAI.ui.drawFaceBox(x, y, w, h, bestConfidence);
+      FaceAI.ui.updateFaceDot(true);
+      FaceAI.state.set("FACE_FOUND");
+    } else {
+      // No valid face – clear overlay
+      FaceAI.ui.clearFaceBox();
+      FaceAI.ui.updateFaceDot(false);
+      FaceAI.state.set("DETECTING");
     }
   }
 
@@ -73,7 +108,7 @@ FaceAI.detection = (function () {
   // ==========================================
   return {
     /**
-     * Initialize the face detection engine (Stage 4.1).
+     * Initialize the face detection engine.
      * @returns {Promise<void>}
      */
     async init() {
@@ -97,9 +132,7 @@ FaceAI.detection = (function () {
           minDetectionConfidence: config.DETECTION_THRESHOLD,
         });
 
-        // Register the results callback (currently just logs)
         faceDetection.onResults(onResults);
-
         await faceDetection.initialize();
         initialized = true;
         console.log("FaceAI: FaceDetection model loaded successfully.");
@@ -121,31 +154,25 @@ FaceAI.detection = (function () {
     },
 
     /**
-     * Start the detection loop.
-     * If init() hasn't been called, it will be called automatically.
-     * @param {HTMLVideoElement} video - the video element with active stream
-     * @returns {Promise<void>}
+     * Start detection loop.
+     * @param {HTMLVideoElement} video
      */
     async start(video) {
       if (!video) {
         console.warn("FaceAI: cannot start detection – no video element.");
         return;
       }
+      if (isRunning) return;
 
-      if (isRunning) return; // already running
-
-      // Initialize model if needed
       if (!initialized) {
         try {
           await this.init();
         } catch (e) {
-          return; // init() already shows error
+          return;
         }
       }
 
       videoElement = video;
-
-      // Ensure video is ready before starting loop
       if (video.readyState < 2) {
         console.log("FaceAI: video not ready yet, waiting...");
         await new Promise((resolve) => {
@@ -154,7 +181,6 @@ FaceAI.detection = (function () {
             resolve();
           };
           video.addEventListener("loadeddata", onReady);
-          // In case it became ready synchronously
           if (video.readyState >= 2) {
             video.removeEventListener("loadeddata", onReady);
             resolve();
@@ -170,11 +196,10 @@ FaceAI.detection = (function () {
     },
 
     /**
-     * Stop the detection loop. Camera stream remains active.
+     * Stop detection loop.
      */
     stop() {
       if (!isRunning) return;
-
       isRunning = false;
       if (animationFrameId) {
         cancelAnimationFrame(animationFrameId);
@@ -186,7 +211,7 @@ FaceAI.detection = (function () {
     },
 
     /**
-     * Check if detection loop is running.
+     * Check if detection loop is active.
      * @returns {boolean}
      */
     isRunning() {
