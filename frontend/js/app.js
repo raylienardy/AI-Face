@@ -33,6 +33,7 @@
       FaceAI.quality.init();
       FaceAI.quality._initialized = true;
     }
+    FaceAI.capture.init();
   }
 
   function onWebGLContextLost(event) {

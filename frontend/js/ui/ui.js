@@ -86,6 +86,18 @@ window.FaceAI = window.FaceAI || {};
       if (el) el.style.display = show ? "block" : "none";
     },
 
+    showCountdown(text) {
+      const overlay = document.getElementById("countdown-overlay");
+      const textEl = document.getElementById("countdown-text");
+      if (overlay) overlay.style.display = "flex";
+      if (textEl) textEl.textContent = text;
+    },
+
+    hideCountdown() {
+      const overlay = document.getElementById("countdown-overlay");
+      if (overlay) overlay.style.display = "none";
+    },
+
     // Private helper
     _updateDot(element, active) {
       if (!element) return;
