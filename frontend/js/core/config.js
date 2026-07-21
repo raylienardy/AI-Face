@@ -50,4 +50,8 @@ FaceAI.config = {
   CENTER_TOLERANCE: 0.15, // 15% dari pusat masih dianggap centered
   MIN_FACE_HEIGHT_RATIO: 0.3, // tinggi bbox minimal 30% tinggi frame
   MAX_FACE_HEIGHT_RATIO: 0.7, // tinggi bbox maksimal 70% tinggi frame (too close)
+
+  // Quality Check – Lighting (Stage 5.3)
+  MIN_BRIGHTNESS: 40, // rata‑rata intensitas minimal (0-255)
+  MAX_BRIGHTNESS: 220, // rata‑rata intensitas maksimal
 };
