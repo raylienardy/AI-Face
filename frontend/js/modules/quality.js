@@ -149,7 +149,13 @@ READY     : ${isReady ? "✅ YES" : "❌ NO"} (counter: ${_readyCounter}/${READY
         resetBuffer();
         _readyCounter = 0;
         FaceAI.ui.showReadyIndicator(false);
-        FaceAI.state.set("DETECTING");
+
+        // Jangan ubah state jika sedang dalam proses capture atau setelah capture
+        const currentState = FaceAI.state.get();
+        if (currentState !== "CAPTURING" && currentState !== "CAPTURED") {
+          FaceAI.state.set("DETECTING");
+        }
+
         FaceAI.ui.updateQualityDebug("NO FACE DETECTED");
       }
     });
