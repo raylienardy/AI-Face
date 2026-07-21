@@ -54,4 +54,8 @@ FaceAI.config = {
   // Quality Check – Lighting (Stage 5.3)
   MIN_BRIGHTNESS: 40, // rata‑rata intensitas minimal (0-255)
   MAX_BRIGHTNESS: 220, // rata‑rata intensitas maksimal
+
+  // Quality Check – Blur (Stage 5.4)
+  BLUR_THRESHOLD: 100, // nilai varians Laplacian minimum agar dianggap tajam
+  BLUR_SAMPLE_WIDTH: 100, // lebar canvas sampling untuk efisiensi
 };
