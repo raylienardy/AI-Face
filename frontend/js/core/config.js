@@ -62,4 +62,10 @@ FaceAI.config = {
   // Quality Check – Stability (Stage 5.5)
   STABILITY_FRAME_COUNT: 10, // jumlah frame yang dilacak
   STABILITY_MOVEMENT_THRESHOLD: 0.05, // 5% lebar frame
+
+  // Quality Check – Visibility (Stage 5.6 enhanced)
+  EYE_PATCH_SIZE: 20, // ukuran persegi sampling (piksel)
+  MOUTH_PATCH_SIZE: 20,
+  EYE_VARIANCE_THRESHOLD: 25, // varians minimum agar dianggap terlihat
+  MOUTH_VARIANCE_THRESHOLD: 25,
 };

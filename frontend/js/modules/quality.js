@@ -48,7 +48,11 @@ FaceAI.quality = (function () {
         const lighting = checkLighting(videoEl, faceData.bbox);
         const blur = checkBlur(videoEl, faceData.bbox);
         const stability = checkStability(vw, faceData.bbox);
-        const visibility = checkVisibility(faceData.landmarks);
+        const visibility = checkVisibility(
+          faceData.landmarks,
+          videoEl,
+          faceData.bbox,
+        );
 
         // Format angka untuk tampilan
         const fmt = (val, decimals = 1) =>
@@ -266,27 +270,108 @@ CONFIDENCE : ${fmt(faceData.confidence * 100, 1)}%`;
     };
   }
 
-  function checkVisibility(landmarks) {
-    if (!landmarks || landmarks.length < 4)
+  /**
+   * Memeriksa visibilitas fitur wajah dengan kombinasi keberadaan landmark
+   * dan analisis varians patch di sekitar mata & mulut.
+   * @param {Array|null} landmarks
+   * @param {HTMLVideoElement} video
+   * @param {Object} bbox - bounding box wajah {x,y,width,height}
+   * @returns {{ eyesVisible, noseVisible, mouthVisible, allVisible }}
+   */
+  function checkVisibility(landmarks, video, bbox) {
+    if (!landmarks || landmarks.length < 4) {
       return {
         eyesVisible: false,
         noseVisible: false,
         mouthVisible: false,
         allVisible: false,
       };
-    const rightEye = landmarks[0],
-      leftEye = landmarks[1];
-    const nose = landmarks[2],
-      mouth = landmarks[3];
-    const eyesVisible = rightEye != null && leftEye != null;
-    const noseVisible = nose != null;
-    const mouthVisible = mouth != null;
-    return {
-      eyesVisible,
-      noseVisible,
-      mouthVisible,
-      allVisible: eyesVisible && noseVisible && mouthVisible,
-    };
+    }
+
+    const rightEye = landmarks[0];
+    const leftEye = landmarks[1];
+    const nose = landmarks[2];
+    const mouth = landmarks[3];
+
+    // Keberadaan landmark (tidak null) adalah syarat dasar
+    let eyesVisible = rightEye != null && leftEye != null;
+    let noseVisible = nose != null;
+    let mouthVisible = mouth != null;
+
+    // Jika landmark ada, lakukan pengecekan varians patch untuk mata dan mulut
+    if (eyesVisible && video && bbox) {
+      eyesVisible =
+        checkPatchVariance(
+          video,
+          rightEye,
+          bbox,
+          FaceAI.config.EYE_PATCH_SIZE,
+        ) >= FaceAI.config.EYE_VARIANCE_THRESHOLD &&
+        checkPatchVariance(
+          video,
+          leftEye,
+          bbox,
+          FaceAI.config.EYE_PATCH_SIZE,
+        ) >= FaceAI.config.EYE_VARIANCE_THRESHOLD;
+    }
+    if (mouthVisible && video && bbox) {
+      mouthVisible =
+        checkPatchVariance(
+          video,
+          mouth,
+          bbox,
+          FaceAI.config.MOUTH_PATCH_SIZE,
+        ) >= FaceAI.config.MOUTH_VARIANCE_THRESHOLD;
+    }
+
+    const allVisible = eyesVisible && noseVisible && mouthVisible;
+    return { eyesVisible, noseVisible, mouthVisible, allVisible };
+  }
+
+  /**
+   * Mengambil patch persegi di sekitar landmark, menghitung varians grayscale.
+   * @param {HTMLVideoElement} video
+   * @param {{x,y}} landmark - koordinat relatif (0-1)
+   * @param {Object} bbox - bounding box wajah
+   * @param {number} patchSize - ukuran patch dalam piksel
+   * @returns {number} varians, atau 0 jika gagal
+   */
+  function checkPatchVariance(video, landmark, bbox, patchSize) {
+    try {
+      // Konversi landmark relatif ke koordinat piksel pada video
+      const lx = landmark.x * video.videoWidth;
+      const ly = landmark.y * video.videoHeight;
+      const half = patchSize / 2;
+      const sx = Math.max(0, lx - half);
+      const sy = Math.max(0, ly - half);
+      const sw = Math.min(patchSize, video.videoWidth - sx);
+      const sh = Math.min(patchSize, video.videoHeight - sy);
+      if (sw <= 0 || sh <= 0) return 0;
+
+      const canvas = getSampleCanvas();
+      canvas.width = sw;
+      canvas.height = sh;
+      const ctx = canvas.getContext("2d");
+      ctx.drawImage(video, sx, sy, sw, sh, 0, 0, sw, sh);
+      const imgData = ctx.getImageData(0, 0, sw, sh);
+      const data = imgData.data;
+      let sum = 0,
+        sumSq = 0,
+        count = 0;
+      for (let i = 0; i < data.length; i += 4) {
+        const gray =
+          0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
+        sum += gray;
+        sumSq += gray * gray;
+        count++;
+      }
+      if (count === 0) return 0;
+      const mean = sum / count;
+      const variance = sumSq / count - mean * mean;
+      return variance;
+    } catch (e) {
+      return 0;
+    }
   }
 
   return { init };
