@@ -71,13 +71,12 @@ FaceAI.detection = (function () {
     const faces = results.detections || [];
     const threshold = FaceAI.config.DETECTION_THRESHOLD;
 
-    // Filter faces above threshold
     const validFaces = faces.filter((f) => getConfidence(f) >= threshold);
 
     // === Face Data Extraction untuk Observer ===
     if (onFaceDataCallback) {
       if (validFaces.length > 0) {
-        const primary = validFaces[0]; // data wajah pertama
+        const primary = validFaces[0];
         const bbox = primary.boundingBox;
         const vw = videoElement.videoWidth;
         const vh = videoElement.videoHeight;
@@ -85,7 +84,6 @@ FaceAI.detection = (function () {
         const yCenter = bbox.yCenter || 0;
         const width = bbox.width || 0;
         const height = bbox.height || 0;
-
         const faceData = {
           bbox: {
             x: (xCenter - width / 2) * vw,
@@ -103,7 +101,6 @@ FaceAI.detection = (function () {
         onFaceDataCallback(null);
       }
     }
-    // ===================================
 
     if (validFaces.length === 0) {
       FaceAI.ui.clearFaceBoxes();
@@ -113,7 +110,7 @@ FaceAI.detection = (function () {
       return;
     }
 
-    // Sort faces: primary criteria from config
+    // Sort
     const criteria = FaceAI.config.PRIMARY_FACE_CRITERIA;
     validFaces.sort((a, b) => {
       const confA = getConfidence(a);
@@ -121,9 +118,8 @@ FaceAI.detection = (function () {
       if (criteria === "area") {
         const areaA = (a.boundingBox.width || 0) * (a.boundingBox.height || 0);
         const areaB = (b.boundingBox.width || 0) * (b.boundingBox.height || 0);
-        if (areaA !== areaB) return areaB - areaA; // descending
+        if (areaA !== areaB) return areaB - areaA;
       }
-      // Fallback to confidence
       return confB - confA;
     });
 
@@ -164,13 +160,22 @@ FaceAI.detection = (function () {
         lineWidth: isPrimary
           ? config.BOX_LINE_WIDTH
           : config.SECONDARY_BOX_LINE_WIDTH,
-        showConfidence: isPrimary, // hanya tampilkan teks confidence pada primary
+        showConfidence: isPrimary,
       });
     });
 
     FaceAI.ui.drawFaceBoxes(boxes);
     FaceAI.ui.updateFaceDot(true);
-    FaceAI.state.set("FACE_FOUND");
+
+    // Jangan turunkan state jika sudah FACE_READY atau lebih tinggi
+    const currentState = FaceAI.state.get();
+    if (
+      currentState !== "FACE_READY" &&
+      currentState !== "CAPTURING" &&
+      currentState !== "CAPTURED"
+    ) {
+      FaceAI.state.set("FACE_FOUND");
+    }
   }
 
   return {
