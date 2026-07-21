@@ -71,6 +71,16 @@ window.FaceAI = window.FaceAI || {};
       FaceAI.drawing.clear();
     },
 
+    showQualityDebug(show) {
+      const el = document.getElementById("quality-debug");
+      if (el) el.style.display = show ? "block" : "none";
+    },
+
+    updateQualityDebug(text) {
+      const el = document.getElementById("quality-debug-text");
+      if (el) el.textContent = text;
+    },
+
     // Private helper
     _updateDot(element, active) {
       if (!element) return;

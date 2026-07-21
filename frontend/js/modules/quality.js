@@ -41,6 +41,8 @@ FaceAI.quality = (function () {
   // ==========================================
 
   function init() {
+    // Tampilkan panel debug
+    FaceAI.ui.showQualityDebug(true);
     FaceAI.detection.onFaceData((faceData) => {
       if (faceData) {
         const config = FaceAI.config;
@@ -69,6 +71,35 @@ FaceAI.quality = (function () {
           visibility, // baru
           confidence: faceData.confidence,
         });
+        if (faceData) {
+          // ... semua checker (position, size, lighting, blur, stability, visibility) tetap sama ...
+          // Setelah semua checker dijalankan, susun teks laporan:
+          const report = [
+            `Position : ${position.centered ? "✅ Centered" : position.tooHigh ? "⬆️ Too High" : position.tooLow ? "⬇️ Too Low" : "↔️ Off Center"}`,
+            `Size     : ${size.good ? "✅ Good" : size.tooSmall ? "🔍 Too Small" : "📷 Too Close"}`,
+            `Lighting : ${lighting.good ? "✅ Good" : lighting.tooDark ? "🌑 Too Dark" : "☀️ Too Bright"} (avg: ${lighting.average})`,
+            `Blur     : ${blur.sharp ? "✅ Sharp" : "💨 Blurry"} (var: ${blur.variance})`,
+            `Stability: ${stability.stable ? "✅ Stable" : "🏃 Moving"} (maxΔ: ${stability.deltaMax}px)`,
+            `Features : ${
+              visibility.allVisible
+                ? "✅ All Visible"
+                : "❌ Missing: " +
+                  [
+                    !visibility.eyesVisible ? "Eyes" : "",
+                    !visibility.noseVisible ? "Nose" : "",
+                    !visibility.mouthVisible ? "Mouth" : "",
+                  ]
+                    .filter(Boolean)
+                    .join(", ")
+            }`,
+            `Face     : ${faceData.confidence ? (faceData.confidence * 100).toFixed(1) + "%" : "N/A"}`,
+          ].join("\n");
+
+          FaceAI.ui.updateQualityDebug(report);
+        } else {
+          FaceAI.ui.updateQualityDebug("No face detected");
+          resetBuffer();
+        }
       } else {
         resetBuffer();
         console.log("Quality: no face");
