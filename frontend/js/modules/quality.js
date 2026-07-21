@@ -1,8 +1,8 @@
 /**
  * FaceAI Quality Assessment Module
- * Version: 0.1 – Milestone 5 Stage 5.5
+ * Version: 0.1 – Milestone 5 Stage 5.6
  *
- * Menilai kualitas wajah: posisi, ukuran, pencahayaan, ketajaman (blur), stabilitas.
+ * Menilai kualitas wajah: posisi, ukuran, pencahayaan, ketajaman (blur), stabilitas, visibilitas fitur.
  */
 "use strict";
 
@@ -53,27 +53,28 @@ FaceAI.quality = (function () {
         const lighting = checkLighting(videoEl, faceData.bbox);
         const blur = checkBlur(videoEl, faceData.bbox);
 
-        // Stabilitas: lacak pusat wajah
         const centerX = faceData.bbox.x + faceData.bbox.width / 2;
         const centerY = faceData.bbox.y + faceData.bbox.height / 2;
         addCenter(centerX, centerY);
         const stability = checkStability(videoW);
+
+        const visibility = checkVisibility(faceData.landmarks); // baru
 
         console.log("Quality checks:", {
           position,
           size,
           lighting,
           blur,
-          stability, // baru
+          stability,
+          visibility, // baru
           confidence: faceData.confidence,
         });
       } else {
-        // Reset buffer saat tidak ada wajah
         resetBuffer();
         console.log("Quality: no face");
       }
     });
-    console.log("Quality module initialized (Stage 5.5)");
+    console.log("Quality module initialized (Stage 5.6)");
   }
 
   /**
@@ -241,9 +242,7 @@ FaceAI.quality = (function () {
   }
 
   /**
-   * Memeriksa stabilitas wajah berdasarkan pergerakan pusat.
-   * @param {number} videoWidth - lebar frame untuk normalisasi threshold
-   * @returns {{ stable: boolean, moving: boolean, deltaMax: number }}
+   * Memeriksa stabilitas wajah.
    */
   function checkStability(videoWidth) {
     const threshold = FaceAI.config.STABILITY_MOVEMENT_THRESHOLD * videoWidth;
@@ -251,8 +250,6 @@ FaceAI.quality = (function () {
     if (_centerBuffer.length < count) {
       return { stable: false, moving: true, deltaMax: Infinity };
     }
-
-    // Hitung jarak maksimum antar dua titik dalam buffer
     let maxDelta = 0;
     for (let i = 0; i < _centerBuffer.length - 1; i++) {
       const dx = _centerBuffer[i].x - _centerBuffer[i + 1].x;
@@ -266,6 +263,35 @@ FaceAI.quality = (function () {
       moving: !stable,
       deltaMax: Math.round(maxDelta * 10) / 10,
     };
+  }
+
+  /**
+   * Memeriksa visibilitas fitur wajah berdasarkan landmark.
+   * BlazeFace 6‑titik: 0=mata kanan, 1=mata kiri, 2=hidung, 3=mulut, 4=telinga kanan, 5=telinga kiri.
+   * @param {Array|null} landmarks - array of {x, y} atau null jika tidak tersedia
+   * @returns {{ eyesVisible: boolean, noseVisible: boolean, mouthVisible: boolean, allVisible: boolean }}
+   */
+  function checkVisibility(landmarks) {
+    if (!landmarks || landmarks.length < 4) {
+      return {
+        eyesVisible: false,
+        noseVisible: false,
+        mouthVisible: false,
+        allVisible: false,
+      };
+    }
+
+    const rightEye = landmarks[0]; // mata kanan
+    const leftEye = landmarks[1]; // mata kiri
+    const nose = landmarks[2]; // hidung
+    const mouth = landmarks[3]; // mulut
+
+    const eyesVisible = rightEye != null && leftEye != null;
+    const noseVisible = nose != null;
+    const mouthVisible = mouth != null;
+    const allVisible = eyesVisible && noseVisible && mouthVisible;
+
+    return { eyesVisible, noseVisible, mouthVisible, allVisible };
   }
 
   return { init };
