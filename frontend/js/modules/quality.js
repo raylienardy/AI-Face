@@ -1,9 +1,6 @@
 /**
  * FaceAI Quality Assessment Module
- * Version: 0.1 – Milestone 5 Stage 5.6 (fixed stability)
- *
- * Menilai kualitas wajah: posisi, ukuran, pencahayaan, blur, stabilitas, visibilitas.
- * Menampilkan SEMUA detail di panel debug HTML.
+ * Version: 0.1 – Milestone 5 Stage 5.7 (Aggregator & Ready Indicator)
  */
 "use strict";
 
@@ -31,10 +28,16 @@ FaceAI.quality = (function () {
   }
 
   // ==========================================
+  // Private – Ready debounce
+  // ==========================================
+  let _readyCounter = 0;
+  const READY_DEBOUNCE_FRAMES = 15; // ~0.5 detik pada 30fps
+
+  // ==========================================
   // Public API
   // ==========================================
   function init() {
-    FaceAI.ui.showQualityDebug(true);
+    FaceAI.ui.showQualityDebug(true); // tetap tampil untuk dev
 
     FaceAI.detection.onFaceData((faceData) => {
       if (faceData) {
@@ -43,24 +46,50 @@ FaceAI.quality = (function () {
         const vw = videoEl.videoWidth;
         const vh = videoEl.videoHeight;
 
+        // Jalankan semua checker
         const position = checkPosition(faceData.bbox, vw, vh);
         const size = checkSize(faceData.bbox, vh);
         const lighting = checkLighting(videoEl, faceData.bbox);
         const blur = checkBlur(videoEl, faceData.bbox);
-
-        // Stabilitas: perbarui buffer pusat wajah
         const centerX = faceData.bbox.x + faceData.bbox.width / 2;
         const centerY = faceData.bbox.y + faceData.bbox.height / 2;
-        addCenter(centerX, centerY); // ← PERBAIKAN: isi buffer
+        addCenter(centerX, centerY);
         const stability = checkStability(vw);
-
         const visibility = checkVisibility(
           faceData.landmarks,
           videoEl,
           faceData.bbox,
         );
 
-        // Format laporan detail
+        // Agregasi: semua syarat harus terpenuhi
+        const allChecksPassed =
+          position.centered &&
+          size.good &&
+          lighting.good &&
+          blur.sharp &&
+          stability.stable &&
+          visibility.allVisible &&
+          !FaceAI.detection.hasMultipleFaces(); // multiple faces tidak diizinkan
+
+        // Debounce: hanya transition jika stabil beberapa frame
+        if (allChecksPassed) {
+          _readyCounter++;
+        } else {
+          _readyCounter = 0;
+        }
+
+        const isReady = _readyCounter >= READY_DEBOUNCE_FRAMES;
+
+        // State machine
+        if (isReady) {
+          FaceAI.state.set("FACE_READY");
+          FaceAI.ui.showReadyIndicator(true);
+        } else {
+          FaceAI.state.set("FACE_FOUND");
+          FaceAI.ui.showReadyIndicator(false);
+        }
+
+        // Tampilkan laporan debug (tetap untuk monitoring)
         const fmt = (val, dec = 1) =>
           typeof val === "number" ? val.toFixed(dec) : String(val);
         const yesno = (b) => (b ? "true" : "false");
@@ -103,19 +132,23 @@ VISIBILITY
   mouthVisible : ${yesno(visibility.mouthVisible)}
   allVisible   : ${yesno(visibility.allVisible)}
 
-CONFIDENCE : ${fmt(faceData.confidence * 100, 1)}%`;
+CONFIDENCE : ${fmt(faceData.confidence * 100, 1)}%
+READY     : ${isReady ? "✅ YES" : "❌ NO"} (counter: ${_readyCounter}/${READY_DEBOUNCE_FRAMES})`;
 
         FaceAI.ui.updateQualityDebug(report);
       } else {
         resetBuffer();
+        _readyCounter = 0;
+        FaceAI.ui.showReadyIndicator(false);
+        FaceAI.state.set("DETECTING");
         FaceAI.ui.updateQualityDebug("NO FACE DETECTED");
       }
     });
-    console.log("Quality module initialized (Stage 5.6, fixed)");
+    console.log("Quality module initialized (Stage 5.7)");
   }
 
   // ----------------------------------------------------------------
-  //  CHECKERS
+  //  CHECKERS (sama seperti sebelumnya)
   // ----------------------------------------------------------------
   function checkPosition(bbox, vw, vh) {
     if (!vw || !vh) return { centered: false, tooHigh: false, tooLow: false };
@@ -290,14 +323,14 @@ CONFIDENCE : ${fmt(faceData.confidence * 100, 1)}%`;
     let noseVisible = nose != null;
     let mouthVisible = mouth != null;
 
-    if (eyesVisible && video && bbox) {
+    if (eyesVisible && video) {
       eyesVisible =
         checkPatchVariance(video, rightEye, FaceAI.config.EYE_PATCH_SIZE) >=
           FaceAI.config.EYE_VARIANCE_THRESHOLD &&
         checkPatchVariance(video, leftEye, FaceAI.config.EYE_PATCH_SIZE) >=
           FaceAI.config.EYE_VARIANCE_THRESHOLD;
     }
-    if (mouthVisible && video && bbox) {
+    if (mouthVisible && video) {
       mouthVisible =
         checkPatchVariance(video, mouth, FaceAI.config.MOUTH_PATCH_SIZE) >=
         FaceAI.config.MOUTH_VARIANCE_THRESHOLD;

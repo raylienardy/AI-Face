@@ -81,6 +81,11 @@ window.FaceAI = window.FaceAI || {};
       if (el) el.textContent = text;
     },
 
+    showReadyIndicator(show) {
+      const el = document.getElementById("ready-indicator");
+      if (el) el.style.display = show ? "block" : "none";
+    },
+
     // Private helper
     _updateDot(element, active) {
       if (!element) return;
