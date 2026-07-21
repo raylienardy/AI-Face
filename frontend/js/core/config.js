@@ -45,4 +45,9 @@ FaceAI.config = {
   SECONDARY_BOX_COLOR: "#9ca3af", // gray-400
   SECONDARY_BOX_LINE_WIDTH: 2,
   DETECTION_OUTPUT_LANDMARKS: true, // request BlazeFace to output landmarks
+
+  // Quality Check – Position & Size (Stage 5.2)
+  CENTER_TOLERANCE: 0.15, // 15% dari pusat masih dianggap centered
+  MIN_FACE_HEIGHT_RATIO: 0.3, // tinggi bbox minimal 30% tinggi frame
+  MAX_FACE_HEIGHT_RATIO: 0.7, // tinggi bbox maksimal 70% tinggi frame (too close)
 };
