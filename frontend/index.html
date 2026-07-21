@@ -32,10 +32,22 @@
         <div id="countdown-overlay" class="countdown-overlay">
           <span id="countdown-text" class="countdown-overlay__text"></span>
         </div>
+        <img
+          id="capture-preview"
+          class="capture-preview-img"
+          style="display: none"
+          alt="Captured face"
+        />
         <div class="camera-preview__placeholder" id="camera-placeholder">
           <p class="camera-preview__text">Camera Not Started</p>
         </div>
       </section>
+
+      <!-- Capture Buttons (Stage 6.4) -->
+      <div id="capture-buttons" class="capture-buttons" style="display: none">
+        <button id="retake-btn" class="btn btn--secondary">Retake</button>
+        <button id="continue-btn" class="btn btn--primary">Continue</button>
+      </div>
 
       <section class="system-status" id="system-status">
         <div class="system-status__item" id="status-backend">

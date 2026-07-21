@@ -98,6 +98,29 @@ window.FaceAI = window.FaceAI || {};
       if (overlay) overlay.style.display = "none";
     },
 
+    showPreview(dataURL) {
+      const img = document.getElementById("capture-preview");
+      if (img) {
+        img.src = dataURL;
+        img.style.display = "block";
+      }
+    },
+
+    hidePreview() {
+      const img = document.getElementById("capture-preview");
+      if (img) img.style.display = "none";
+    },
+
+    showCaptureButtons() {
+      const btns = document.getElementById("capture-buttons");
+      if (btns) btns.style.display = "flex";
+    },
+
+    hideCaptureButtons() {
+      const btns = document.getElementById("capture-buttons");
+      if (btns) btns.style.display = "none";
+    },
+
     // Private helper
     _updateDot(element, active) {
       if (!element) return;
