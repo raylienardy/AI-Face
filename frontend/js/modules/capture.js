@@ -1,30 +1,21 @@
 /**
  * FaceAI Capture Module
- * Version: 0.1 – Milestone 6 Stage 6.4
- *
- * - takeSnapshot(video) → canvas
- * - State‑driven countdown & auto capture
- * - Preview & confirm UI (Retake / Continue)
+ * Version: 0.1 – Milestone 6 Stage 6.5
  */
 "use strict";
 
 FaceAI.capture = (function () {
-  // ==========================================
-  // Private State
-  // ==========================================
   let countdownTimer = null;
   let currentCount = 0;
   let isCountingDown = false;
   let stateWatchInterval = null;
   const COUNTDOWN_SECONDS = 3;
-  let lastCapture = null; // HTMLCanvasElement
+  let lastCapture = null;
 
-  // ==========================================
-  // Countdown Logic (private)
-  // ==========================================
   function startCountdown() {
     if (isCountingDown) return;
     isCountingDown = true;
+    FaceAI.state.set("COUNTDOWN");
     currentCount = COUNTDOWN_SECONDS;
     showCurrentCount();
   }
@@ -38,6 +29,8 @@ FaceAI.capture = (function () {
     }
     FaceAI.ui.hideCountdown();
     console.log("Countdown cancelled:", reason);
+    // Kembalikan state ke FACE_FOUND agar bisa memulai ulang jika quality masih baik
+    FaceAI.state.set("FACE_FOUND");
   }
 
   function showCurrentCount() {
@@ -62,10 +55,13 @@ FaceAI.capture = (function () {
     if (!FaceAI.state.is("FACE_READY")) {
       console.warn("Capture aborted: quality dropped at last moment");
       lastCapture = null;
+      FaceAI.state.set("FACE_FOUND");
       return;
     }
 
-    // Tunggu 100ms agar overlay countdown hilang sepenuhnya
+    FaceAI.state.set("CAPTURING");
+
+    // Tunggu 100ms agar overlay countdown hilang
     await new Promise((resolve) => setTimeout(resolve, 100));
 
     const video = FaceAI.ui.getVideoElement();
@@ -73,6 +69,7 @@ FaceAI.capture = (function () {
     if (!canvas) {
       console.error("Auto capture failed: snapshot returned null");
       lastCapture = null;
+      FaceAI.state.set("FACE_FOUND");
       return;
     }
 
@@ -84,18 +81,13 @@ FaceAI.capture = (function () {
       canvas.height,
     );
 
-    // Hentikan deteksi untuk menghemat resource selama preview
     FaceAI.detection.stop();
-    // Tampilkan preview
     const dataURL = FaceAI.capture.toDataURL(canvas);
     FaceAI.ui.showPreview(dataURL);
     FaceAI.ui.showCaptureButtons();
     FaceAI.state.set("CAPTURED");
   }
 
-  // ==========================================
-  // State Monitoring
-  // ==========================================
   function checkState() {
     const state = FaceAI.state.get();
     if (state === "FACE_READY") {
@@ -109,26 +101,19 @@ FaceAI.capture = (function () {
     }
   }
 
-  // ==========================================
-  // Tombol Aksi
-  // ==========================================
   function onRetake() {
-    // Sembunyikan preview dan tombol
     FaceAI.ui.hidePreview();
     FaceAI.ui.hideCaptureButtons();
     lastCapture = null;
 
-    // Kembalikan ke mode live
     const video = FaceAI.ui.getVideoElement();
-    FaceAI.detection.start(video); // akan menunggu video siap, lalu mulai deteksi
+    FaceAI.detection.start(video);
     FaceAI.state.set("CAMERA_READY");
   }
 
   function onContinue() {
-    // Saat ini, hanya log dan set state tetap CAPTURED
     console.log("User chose to continue. Image ready for backend.");
-    FaceAI.state.set("CAPTURED");
-    // Milestone 7 akan menambahkan upload di sini
+    // Tetap di state CAPTURED
   }
 
   function bindButtons() {
@@ -138,15 +123,12 @@ FaceAI.capture = (function () {
     if (continueBtn) continueBtn.addEventListener("click", onContinue);
   }
 
-  // ==========================================
-  // Public API
-  // ==========================================
   return {
     init() {
       if (stateWatchInterval) return;
       stateWatchInterval = setInterval(checkState, 200);
       bindButtons();
-      console.log("Capture module initialized (Stage 6.4)");
+      console.log("Capture module initialized (Stage 6.5)");
     },
 
     destroy() {

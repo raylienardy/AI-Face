@@ -60,6 +60,7 @@
   }
 
   function cleanup() {
+    FaceAI.capture.destroy();
     FaceAI.detection.stop();
     FaceAI.camera.stop();
   }

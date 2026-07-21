@@ -171,6 +171,7 @@ FaceAI.detection = (function () {
     const currentState = FaceAI.state.get();
     if (
       currentState !== "FACE_READY" &&
+      currentState !== "COUNTDOWN" &&
       currentState !== "CAPTURING" &&
       currentState !== "CAPTURED"
     ) {
