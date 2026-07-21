@@ -1,266 +1,254 @@
-## 2. Pemecahan Milestone 5 Menjadi Stage
+# Dokumen Perencanaan Milestone 6 — Auto Capture (Workflow Fotografi Cerdas)
 
-### Stage 5.1 — Face Data Extraction & Landmark Activation
+**Versi:** 1.0  
+**Status:** Draft untuk persetujuan Founder  
+**Peran:** Senior AI Engineer
+
+---
+
+## 1. Evaluasi Deliverables Milestone 6
+
+| Deliverable                               | Keputusan      | Alasan Teknis & Pengalaman Repositori                                                                                                                                                                       |
+| ----------------------------------------- | -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Countdown**                             | ✅ Pertahankan | Memberi waktu pengguna untuk stabilisasi akhir. Durasi pendek (3 detik) sudah cukup. Semua repositori menekankan konsistensi gambar; countdown mengurangi variasi gerakan mendadak.                         |
+| **Auto Capture**                          | ✅ Pertahankan | Inti milestone. Dari DeepFace dan MEBeauty: gambar diam dipilih secara otomatis setelah kondisi ideal tercapai, bukan manual. Mengurangi human error.                                                       |
+| **Cancel Countdown**                      | ✅ Pertahankan | Sangat penting. Jika kualitas turun di tengah countdown, gambar yang dihasilkan tidak akan optimal. Logika pembatalan harus ketat dan instan, seperti yang diterapkan pada sistem biometrik modern (e‑KYC). |
+| **Freeze Frame**                          | ✅ Pertahankan | Harus ada preview beku agar pengguna bisa menilai hasilnya. Mirip dengan preview hasil scan di aplikasi dokumen.                                                                                            |
+| **Preview Image**                         | ✅ Pertahankan | Konfirmasi visual pengguna. DeepFace tidak memproses frame mentah; ia membutuhkan input gambar. Preview memungkinkan pengguna memastikan wajah tertangkap dengan baik.                                      |
+| **Retake Button**                         | ✅ Pertahankan | Memberi kontrol penuh. Jika pengguna tidak puas (ekspresi, kedipan, dll.), bisa langsung mengulang tanpa harus kembali ke layar awal. UX standar aplikasi kamera.                                           |
+| **Continue Button**                       | ✅ Pertahankan | Gerbang menuju milestone backend. Hanya setelah pengguna menekan "Continue", gambar dikirim untuk analisis. Ini menjaga prinsip "capture then analyze".                                                     |
+| _(Tambahan)_ **Capture Source Selection** | ❌ Tunda       | Tidak perlu di Milestone 6. Kita hanya menggunakan kamera default. Jika nanti mau tambah upload gambar dari file, bisa di milestone terpisah.                                                               |
+| _(Tambahan)_ **Exposure/Focus Lock**      | ❌ Tunda       | Terlalu dini. Bisa menjadi perbaikan di Milestone 12 (UI/Performance). Saat ini kamera otomatis sudah cukup baik.                                                                                           |
+
+**Kesimpulan:** Semua deliverables asli dipertahankan. Tidak ada yang perlu dihapus atau digeser. Milestone ini sudah terdefinisi dengan baik.
+
+---
+
+## 2. Pemecahan Milestone 6 Menjadi Stage
+
+### Stage 6.1 — Capture Service (Freeze Frame)
 
 **Tujuan:**  
-Menyediakan data mentah (bounding box, confidence, landmark) dari hasil deteksi untuk digunakan oleh modul quality assessment.
+Menyediakan fungsi untuk mengambil frame statis dari elemen video dan mengembalikannya sebagai objek gambar (canvas/data URL).
 
 **Alasan:**  
-Semua pemeriksaan quality membutuhkan informasi area wajah, posisi, dan landmark. Stage ini memastikan data tersedia tanpa mengubah perilaku deteksi secara fundamental.
+Memisahkan logika capture dari alur countdown dan UI. Memungkinkan pengujian independen tanpa mengganggu pipeline deteksi.
 
 **Deliverables:**
 
-- `detection.js` menyediakan callback baru `onFaceData` (atau mengembalikan data via event) yang berisi `{ bbox, confidence, landmarks }` untuk wajah primer.
-- `config.js` menambahkan `DETECTION_OUTPUT_LANDMARKS: true`.
-- `quality.js` (modul baru) menerima data wajah dan memulai pipeline penilaian.
+- Modul baru `capture.js` dengan method `takeSnapshot(videoElement)` yang menghasilkan `HTMLCanvasElement`.
+- Method `toDataURL()` untuk mendapatkan gambar dalam format yang bisa ditampilkan.
 
 **Definition of Done:**
 
-- Setiap frame, data wajah primer (bbox + landmark) dapat diakses oleh modul lain.
-- Tidak ada perubahan visual pada bounding box atau UI.
+- `FaceAI.capture.takeSnapshot(video)` mengembalikan canvas yang berisi frame video saat itu.
+- Canvas tidak terpengaruh oleh overlay (bounding box, countdown) karena diambil dari elemen video, bukan dari layar.
 
 **Test:**
 
-- Console log data wajah (bbox, landmarks) setiap frame.
+- Panggil `FaceAI.capture.takeSnapshot(FaceAI.ui.getVideoElement())` dari console, lalu `canvas.toDataURL()` untuk menampilkan gambar di tab baru.
 
 **Edge Case:**
 
-- Jika landmark tidak tersedia (BlazeFace tidak mengeluarkan), objek landmarks bernilai `null`.
+- Video belum siap (dimensi 0) → return null.
 
 **Risiko:**
 
-- Aktifasi `outputLandmarks` sedikit menambah beban komputasi; tidak signifikan karena model tetap ringan.
+- Canvas mungkin kosong jika video tidak memiliki metadata. Kita sudah menunggu `readyState >= 2` di modul kamera, jadi aman.
 
 **Catatan Engineering:**
 
-- Data wajah akan dikirim melalui mekanisme observer atau fungsi `onFaceData` yang dipanggil di dalam `onResults`. Tidak mengubah state machine.
+- Gunakan `canvas.width = video.videoWidth; canvas.height = video.videoHeight; ctx.drawImage(video, 0, 0);`. Tidak perlu resize, agar gambar asli penuh. Resize akan dilakukan di backend.
 
 **File yang berubah:**
 
-- `frontend/js/modules/detection.js` – mengekspos data wajah dan mengaktifkan landmark.
-- `frontend/js/core/config.js` – menambahkan `DETECTION_OUTPUT_LANDMARKS`.
-- `frontend/js/modules/quality.js` – file baru (placeholder untuk stage berikutnya).
+- `frontend/js/modules/capture.js` (file baru)
+- `frontend/index.html` – tambahkan script `capture.js`
 
 ---
 
-### Stage 5.2 — Face Position & Size Check
+### Stage 6.2 — Countdown Timer & UI
 
 **Tujuan:**  
-Memeriksa apakah wajah berada di tengah frame dan ukurannya sesuai (tidak terlalu kecil/besar).
+Menampilkan countdown visual di atas video saat status mencapai `FACE_READY`, dan membatalkannya jika kualitas turun.
 
 **Alasan:**  
-Posisi dan ukuran adalah syarat paling dasar untuk crop yang baik. Tanpa ini, backend akan menerima gambar yang mungkin terpotong atau terlalu rendah resolusinya.
+Memberi waktu pengguna untuk bersiap dan memastikan stabilitas akhir. Countdown yang terlihat jelas mengurangi ketidakpastian.
 
 **Deliverables:**
 
-- Fungsi `checkPosition(bbox, videoWidth, videoHeight)` mengembalikan `{ centered: bool, tooHigh: bool, tooLow: bool }`.
-- Fungsi `checkSize(bbox, videoHeight)` mengembalikan `{ tooSmall: bool, tooClose: bool, good: bool }`.
-- Integrasi ke `quality.js` untuk menggabungkan hasil.
+- Elemen overlay countdown di HTML (misal, `<div id="countdown-overlay">` dengan teks besar).
+- Modul `countdown.js` (atau terintegrasi ke `capture.js`) yang mendengarkan perubahan state dan mengelola timer 3 detik.
+- Logika pembatalan: setiap perubahan state dari `FACE_READY` ke selain itu, countdown dibatalkan, overlay disembunyikan.
+- Visual hitung mundur: "3", "2", "1" setiap detik.
 
 **Definition of Done:**
 
-- Wajah di tengah (toleransi ±15% dari pusat) → `centered = true`.
-- Tinggi bounding box antara 30%–70% tinggi video → `good = true`.
+- Saat state `FACE_READY` bertahan, countdown muncul dan berjalan dari 3 ke 1.
+- Jika state berubah menjadi selain `FACE_READY` sebelum countdown selesai, overlay menghilang dan timer direset.
 
 **Test:**
 
-- Gerakkan wajah ke kiri/kanan/atas/bawah, amati flag.
-- Dekatkan/jauhkan wajah, amati flag ukuran.
+- Biarkan wajah ready → countdown muncul.
+- Gerakkan wajah saat countdown → countdown batal, hilang.
+- Setelah batal, kembali ready → countdown mulai dari awal (reset).
 
 **Edge Case:**
 
-- Wajah sangat dekat sehingga bounding box melebihi frame → `tooClose = true`.
-- Wajah terlalu jauh sehingga tinggi < 20% frame → `tooSmall = true`.
+- Koneksi lambat? Tidak relevan, semua local.
+- Countdown selesai tapi tepat saat itu wajah bergerak → capture boleh gagal? Kita akan verifikasi ulang quality tepat sebelum capture. Jadi di Stage 6.3 kita cek lagi.
 
 **Risiko:**
 
-- Threshold perlu dikalibrasi; akan diatur di `config.js` untuk kemudahan penyesuaian.
+- Overlay countdown dapat menutupi indikator lain. Letakkan di tengah area video dengan z-index tinggi.
 
 **File yang berubah:**
 
-- `frontend/js/modules/quality.js` – implementasi fungsi.
-- `frontend/js/core/config.js` – tambah `MIN_FACE_HEIGHT_RATIO`, `MAX_FACE_HEIGHT_RATIO`, `CENTER_TOLERANCE`.
+- `frontend/index.html` – tambah `<div id="countdown-overlay">`
+- `frontend/css/style.css` – gaya overlay
+- `frontend/js/modules/capture.js` – logika countdown
+- `frontend/js/ui/ui.js` – tambah method `showCountdown`, `hideCountdown`
 
 ---
 
-### Stage 5.3 — Lighting Check
+### Stage 6.3 — Auto Capture Trigger
 
 **Tujuan:**  
-Memastikan pencahayaan pada area wajah tidak terlalu gelap atau terlalu terang.
+Mengambil gambar secara otomatis segera setelah countdown selesai, dengan verifikasi ulang kualitas pada detik terakhir.
 
 **Alasan:**  
-Pencahayaan ekstrem menghilangkan detail wajah, membuat analisis beauty tidak akurat.
+Ini adalah inti milestone. Gambar diambil tanpa intervensi manual, memastikan momen yang tepat.
 
 **Deliverables:**
 
-- Fungsi `checkLighting(video, bbox)` yang mengambil rata‑rata intensitas piksel di area wajah (grayscale). Mengembalikan `{ tooDark: bool, tooBright: bool, good: bool }`.
+- Di akhir countdown (setelah menampilkan "1" dan jeda), panggil `FaceAI.capture.takeSnapshot(videoElement)`.
+- Simpan canvas hasil capture di properti internal (misal `lastCapture`).
+- Hentikan loop deteksi untuk membebaskan sumber daya? Tidak perlu, kita hanya freeze tampilan. Loop deteksi tetap berjalan untuk mendeteksi perubahan (tapi video akan kita ganti dengan gambar statis di stage berikutnya).
 
 **Definition of Done:**
 
-- Rata‑rata intensitas antara 40–220 (dari 255) → `good`.
-- Di luar rentang tersebut → peringatan.
+- Setelah countdown habis, frame video saat itu diambil menjadi canvas.
+- Canvas disimpan dan dapat diakses oleh modul lain.
 
 **Test:**
 
-- Sorotkan cahaya terang ke wajah → `tooBright`.
-- Tutup lampu → `tooDark`.
+- Saat ready, setelah countdown "3,2,1", console log atau tampilkan gambar capture.
 
 **Edge Case:**
 
-- Area wajah kecil mungkin memberikan rata‑rata tidak representatif. Gunakan sample piksel yang cukup (misal, ambil 100 titik acak di dalam bbox untuk efisiensi).
+- Jika tepat sebelum capture kualitas turun (misal wajah hilang), countdown seharusnya sudah batal. Kita tambahkan pengecekan `FaceAI.state.is('FACE_READY')` tepat sebelum mengambil snapshot; jika tidak, batalkan capture.
 
 **Risiko:**
 
-- Bisa false positive jika latar belakang sangat kontras tapi area wajah normal. Fokus hanya pada piksel di dalam bounding box.
+- Capture mungkin mengambil frame dengan countdown masih terlihat jika timing tidak pas. Kita sembunyikan overlay countdown sebelum mengambil snapshot (delay 100ms setelah overlay hilang).
 
 **File yang berubah:**
 
-- `frontend/js/modules/quality.js` – tambah fungsi.
-- `frontend/js/core/config.js` – tambah `MIN_BRIGHTNESS`, `MAX_BRIGHTNESS`.
+- `frontend/js/modules/capture.js` – trigger capture.
 
 ---
 
-### Stage 5.4 — Blur Check
+### Stage 6.4 — Preview & Confirm UI
 
 **Tujuan:**  
-Mendeteksi apakah wajah tampak blur (tidak tajam).
+Menampilkan hasil capture sebagai gambar diam, dan memberikan pilihan kepada pengguna untuk mengulangi atau melanjutkan.
 
 **Alasan:**  
-Gambar blur menyebabkan landmark tidak akurat dan analisis tekstur gagal.
+Memberi kendali penuh kepada pengguna sebelum gambar dikirim ke backend. Sesuai dengan filosofi FaceAI: human-in-the-loop.
 
 **Deliverables:**
 
-- Fungsi `checkBlur(video, bbox)` yang menghitung varians Laplacian pada area wajah (grayscale). Mengembalikan `{ blurry: bool, sharp: bool }`.
+- Sembunyikan video stream, tampilkan canvas hasil capture di area yang sama (atau di atasnya).
+- Tampilkan dua tombol: "Retake" dan "Continue".
+- Tombol "Retake": menghapus preview, menampilkan kembali video stream, mengaktifkan kembali deteksi, mereset state ke `IDLE` atau langsung ke `CAMERA_READY`.
+- Tombol "Continue": (untuk Milestone 7) akan men-trigger unggahan gambar. Saat ini cukup set state `CAPTURED` dan simulasikan logika lanjutan.
 
 **Definition of Done:**
 
-- Varians Laplacian < threshold → `blurry`.
+- Preview muncul, video tersembunyi, tombol berfungsi.
+- Klik "Retake" → kembali ke kamera live, bisa capture lagi.
+- Klik "Continue" → state `CAPTURED`, gambar siap (bisa diakses via `FaceAI.capture.getLastCapture()`).
 
 **Test:**
 
-- Goyangkan kepala cepat → `blurry`.
-- Diam → `sharp`.
+- Lakukan capture, verifikasi preview, klik retake, pastikan kamera kembali normal.
 
 **Edge Case:**
 
-- Wajah terlalu kecil → varians tidak valid. Jika tinggi bbox < 100px, lewati pemeriksaan atau langsung anggap blur.
+- Pengguna klik "Retake" berkali-kali → tidak ada efek negatif, hanya reset state.
+- Tab tidak aktif saat preview → tidak masalah.
 
 **File yang berubah:**
 
-- `frontend/js/modules/quality.js` – tambah fungsi.
-- `frontend/js/core/config.js` – tambah `BLUR_THRESHOLD`.
+- `frontend/index.html` – tombol "Retake" dan "Continue" (disembunyikan awalnya)
+- `frontend/css/style.css` – gaya tombol
+- `frontend/js/ui/ui.js` – method `showPreview`, `hidePreview`, `showCaptureButtons`, dll.
+- `frontend/js/modules/capture.js` – logika state dan penyimpanan hasil.
 
 ---
 
-### Stage 5.5 — Stability Check
+### Stage 6.5 — Workflow Integration & Edge Cases
 
 **Tujuan:**  
-Memastikan wajah tidak banyak bergerak (stabil) selama beberapa frame.
+Menggabungkan seluruh alur dari deteksi → quality → ready → countdown → capture → preview → konfirmasi, serta menangani situasi tak terduga.
 
 **Alasan:**  
-Gerakan menyebabkan motion blur dan menyulitkan auto‑capture. Stabilitas juga indikasi pengguna siap.
+Memastikan tidak ada celah yang menyebabkan crash atau freeze.
 
 **Deliverables:**
 
-- Buffer posisi wajah (pusat x,y) dari N frame terakhir.
-- Fungsi `checkStability(centerX, centerY)` yang menghitung deviasi standar atau jarak maksimum. Mengembalikan `{ stable: bool, moving: bool }`.
+- Alur lengkap terintegrasi di `app.js` atau modul orchestrator kecil.
+- Penanganan: kamera dicabut saat countdown, WebGL context loss, multiple faces muncul saat countdown.
+- State machine diperbarui dengan state baru: `COUNTDOWN`, `CAPTURING`, `CAPTURED`.
 
 **Definition of Done:**
 
-- Jika pergerakan pusat wajah < 5% lebar frame selama 10 frame berturut‑turut → `stable`.
+- Semua test case berhasil.
+- Tidak ada error console dalam skenario normal dan abnormal.
 
 **Test:**
 
-- Gerakkan kepala perlahan → tidak stabil.
-- Tahan posisi → stabil setelah 10 frame.
-
-**Edge Case:**
-
-- Perubahan ukuran bounding box juga bisa dianggap gerakan, tapi untuk sederhana kita hanya lacak pusat.
-
-**File yang berubah:**
-
-- `frontend/js/modules/quality.js` – buffer dan fungsi stabilitas.
-- `frontend/js/core/config.js` – `STABILITY_FRAME_COUNT`, `STABILITY_MOVEMENT_THRESHOLD`.
-
----
-
-### Stage 5.6 — Visibility Check (Landmark‑Based)
-
-**Tujuan:**  
-Memastikan fitur wajah utama (mata, hidung, mulut) terlihat.
-
-**Alasan:**  
-Jika fitur terhalang (rambut, masker, kacamata hitam), analisis beauty tidak mungkin dilakukan.
-
-**Deliverables:**
-
-- Fungsi `checkVisibility(landmarks)` yang memeriksa apakah landmark mata kiri, kanan, hidung, dan mulut ada dan tidak null. Mengembalikan `{ eyesVisible, noseVisible, mouthVisible }`.
-
-**Definition of Done:**
-
-- Landmark mata kiri (indeks 0) dan kanan (1) terdefinisi → eyesVisible.
-- Landmark hidung (2) → noseVisible.
-- Landmark mulut (3) → mouthVisible.
-
-**Test:**
-
-- Tutup mata dengan tangan → eyesVisible false.
-- Pakai masker → mouthVisible false.
-
-**Edge Case:**
-
-- BlazeFace mungkin tidak memberikan landmark sama sekali; maka semua false.
+- Jalankan alur normal beberapa kali.
+- Cabut kamera saat countdown → kembali ke IDLE.
+- Munculkan dua wajah saat countdown → countdown batal.
+- Tutup tab saat preview → tidak ada memory leak.
 
 **Risiko:**
 
-- Landmark bisa tidak akurat; kita tidak memvalidasi posisi, hanya keberadaan.
+- Kompleksitas state machine meningkat. Kita akan menambah state `COUNTDOWN`, `CAPTURING`, `CAPTURED` di `state.js`. Ini perubahan terstruktur.
 
 **File yang berubah:**
 
-- `frontend/js/modules/quality.js` – implementasi.
-- Tidak perlu tambahan config.
+- `frontend/js/core/state.js` – tambah state baru
+- `frontend/js/app.js` – koordinasi alur
+- `frontend/js/modules/capture.js` – integrasi penuh
 
 ---
 
-### Stage 5.7 — Quality Aggregator & Visual Feedback
+## 3. Urutan Pengerjaan yang Direkomendasikan
 
-**Tujuan:**  
-Menggabungkan semua pemeriksaan, menentukan apakah wajah "Ready to Capture", dan menampilkan indikator visual kepada pengguna.
+1. **6.1** – Capture service (fondasi teknis)
+2. **6.2** – Countdown UI & timer (feedback pengguna)
+3. **6.3** – Auto capture trigger (logika inti)
+4. **6.4** – Preview & confirm UI (interaksi pengguna)
+5. **6.5** – Integration & hardening (pemantapan)
 
-**Alasan:**  
-Pengguna perlu tahu apa yang harus diperbaiki sebelum countdown dimulai (M6). Ini juga menjadi sinyal resmi ke state machine bahwa kualitas terpenuhi.
-
-**Deliverables:**
-
-- Fungsi `assessQuality(faceData)` yang menjalankan semua checker dan menghasilkan objek `{ ready: bool, checks: {...} }`.
-- Modul `quality.js` memperbarui UI dengan indikator per parameter (misal, ikon centang/silang di area status).
-- State machine bertransisi ke `FACE_READY` jika semua syarat terpenuhi, jika tidak tetap `FACE_FOUND`.
-- Jika multiple faces terdeteksi (`FaceAI.detection.hasMultipleFaces()`), otomatis tidak ready.
-
-**Definition of Done:**
-
-- Semua parameter hijau → indikator "Ready" muncul, state `FACE_READY`.
-- Satu saja merah → indikator "Not Ready", state tetap `FACE_FOUND`.
-
-**Test:**
-
-- Penuhi semua syarat → "Ready".
-- Buat salah satu gagal (misal terlalu gelap) → "Not Ready", periksa parameter yang gagal.
-
-**Edge Case:**
-
-- Transisi cepat antara ready dan not ready bisa menyebabkan flicker. Akan ditambahkan debounce sederhana (misal, harus stabil 0.5 detik dalam status ready).
-
-**Risiko:**
-
-- UI tambahan mungkin memerlukan penyesuaian layout; kita akan menambah elemen di bawah status indicator.
-
-**File yang berubah:**
-
-- `frontend/js/modules/quality.js` – agregator dan pemanggilan UI.
-- `frontend/js/ui/ui.js` – tambah method untuk menampilkan quality status.
-- `frontend/index.html` – mungkin tambah div untuk quality checklist.
-- `frontend/css/style.css` – gaya untuk checklist.
+Setiap stage membangun di atas stage sebelumnya secara bertahap.
 
 ---
+
+## 4. Catatan Tambahan dari Sudut Pandang Pengguna
+
+- **Countdown singkat (3 detik)** cukup untuk pengguna menahan posisi tanpa merasa lama.
+- **Pembatalan countdown harus instan**; pengguna tidak perlu menunggu jika wajah berubah.
+- **Preview harus jelas**, dengan tombol "Retake" dan "Continue" kontras. "Retake" di sebelah kiri (warna netral), "Continue" di kanan (warna hijau) mengikuti kebiasaan UI mobile.
+- **Jika pengguna diam tapi countdown tidak muncul**, berarti salah satu syarat quality belum terpenuhi. Idealnya kita bisa menampilkan penyebabnya, tetapi itu sudah dicakup oleh panel debug. Untuk production nanti, akan ada indikator minimalis.
+- **Tidak ada timeout paksa** setelah preview; pengguna boleh menunda selama yang diinginkan.
+
+---
+
+## 5. Kesimpulan
+
+Milestone 6 akan mengubah FaceAI dari sistem deteksi pasif menjadi aplikasi yang bisa menghasilkan foto siap analisis. Dengan membagi menjadi stage kecil, kita menjaga pengembangan tetap terkendali dan setiap komponen dapat diuji secara mandiri. Seluruh desain mengikuti prinsip "Capture then Analyze" yang telah terbukti di keempat repositori acuan.
+
+Saya menunggu persetujuan Anda untuk memulai implementasi Stage 6.1.
