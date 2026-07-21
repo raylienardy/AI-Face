@@ -1,37 +1,31 @@
 /**
  * FaceAI Quality Assessment Module
- * Version: 0.1 – Milestone 5 Stage 5.6
+ * Version: 0.1 – Milestone 5 Stage 5.6 (debug detail)
  *
- * Menilai kualitas wajah: posisi, ukuran, pencahayaan, ketajaman (blur), stabilitas, visibilitas fitur.
+ * Menilai kualitas wajah: posisi, ukuran, pencahayaan, blur, stabilitas, visibilitas.
+ * Menampilkan SEMUA detail di panel debug HTML.
  */
 "use strict";
 
 FaceAI.quality = (function () {
   // ==========================================
-  // Private – Offscreen canvas untuk sampling
+  // Private – Offscreen canvas
   // ==========================================
   let _sampleCanvas = null;
-
   function getSampleCanvas() {
-    if (!_sampleCanvas) {
-      _sampleCanvas = document.createElement("canvas");
-    }
+    if (!_sampleCanvas) _sampleCanvas = document.createElement("canvas");
     return _sampleCanvas;
   }
 
   // ==========================================
-  // Private – Buffer posisi untuk stabilitas
+  // Private – Stability buffer
   // ==========================================
-  let _centerBuffer = []; // array of {x, y}
-
+  let _centerBuffer = [];
   function addCenter(x, y) {
     _centerBuffer.push({ x, y });
     const maxLen = FaceAI.config.STABILITY_FRAME_COUNT;
-    while (_centerBuffer.length > maxLen) {
-      _centerBuffer.shift();
-    }
+    while (_centerBuffer.length > maxLen) _centerBuffer.shift();
   }
-
   function resetBuffer() {
     _centerBuffer = [];
   }
@@ -39,119 +33,106 @@ FaceAI.quality = (function () {
   // ==========================================
   // Public API
   // ==========================================
-
   function init() {
-    // Tampilkan panel debug
     FaceAI.ui.showQualityDebug(true);
+
     FaceAI.detection.onFaceData((faceData) => {
       if (faceData) {
         const config = FaceAI.config;
         const videoEl = FaceAI.ui.getVideoElement();
-        const videoW = videoEl.videoWidth;
-        const videoH = videoEl.videoHeight;
+        const vw = videoEl.videoWidth;
+        const vh = videoEl.videoHeight;
 
-        const position = checkPosition(faceData.bbox, videoW, videoH);
-        const size = checkSize(faceData.bbox, videoH);
+        const position = checkPosition(faceData.bbox, vw, vh);
+        const size = checkSize(faceData.bbox, vh);
         const lighting = checkLighting(videoEl, faceData.bbox);
         const blur = checkBlur(videoEl, faceData.bbox);
+        const stability = checkStability(vw, faceData.bbox);
+        const visibility = checkVisibility(faceData.landmarks);
 
-        const centerX = faceData.bbox.x + faceData.bbox.width / 2;
-        const centerY = faceData.bbox.y + faceData.bbox.height / 2;
-        addCenter(centerX, centerY);
-        const stability = checkStability(videoW);
+        // Format angka untuk tampilan
+        const fmt = (val, decimals = 1) =>
+          typeof val === "number" ? val.toFixed(decimals) : String(val);
+        const yesno = (b) => (b ? "true" : "false");
+        const deltaStr =
+          stability.deltaMax === Infinity
+            ? "N/A"
+            : fmt(stability.deltaMax, 1) + " px";
+        const avgStr =
+          lighting.average === -1 ? "N/A" : String(lighting.average);
 
-        const visibility = checkVisibility(faceData.landmarks); // baru
+        const report = `POSITION
+  centered : ${yesno(position.centered)}
+  tooHigh  : ${yesno(position.tooHigh)}
+  tooLow   : ${yesno(position.tooLow)}
 
-        console.log("Quality checks:", {
-          position,
-          size,
-          lighting,
-          blur,
-          stability,
-          visibility, // baru
-          confidence: faceData.confidence,
-        });
-        if (faceData) {
-          // ... semua checker (position, size, lighting, blur, stability, visibility) tetap sama ...
-          // Setelah semua checker dijalankan, susun teks laporan:
-          const report = [
-            `Position : ${position.centered ? "✅ Centered" : position.tooHigh ? "⬆️ Too High" : position.tooLow ? "⬇️ Too Low" : "↔️ Off Center"}`,
-            `Size     : ${size.good ? "✅ Good" : size.tooSmall ? "🔍 Too Small" : "📷 Too Close"}`,
-            `Lighting : ${lighting.good ? "✅ Good" : lighting.tooDark ? "🌑 Too Dark" : "☀️ Too Bright"} (avg: ${lighting.average})`,
-            `Blur     : ${blur.sharp ? "✅ Sharp" : "💨 Blurry"} (var: ${blur.variance})`,
-            `Stability: ${stability.stable ? "✅ Stable" : "🏃 Moving"} (maxΔ: ${stability.deltaMax}px)`,
-            `Features : ${
-              visibility.allVisible
-                ? "✅ All Visible"
-                : "❌ Missing: " +
-                  [
-                    !visibility.eyesVisible ? "Eyes" : "",
-                    !visibility.noseVisible ? "Nose" : "",
-                    !visibility.mouthVisible ? "Mouth" : "",
-                  ]
-                    .filter(Boolean)
-                    .join(", ")
-            }`,
-            `Face     : ${faceData.confidence ? (faceData.confidence * 100).toFixed(1) + "%" : "N/A"}`,
-          ].join("\n");
+SIZE
+  tooSmall : ${yesno(size.tooSmall)}
+  tooClose : ${yesno(size.tooClose)}
+  good     : ${yesno(size.good)}
 
-          FaceAI.ui.updateQualityDebug(report);
-        } else {
-          FaceAI.ui.updateQualityDebug("No face detected");
-          resetBuffer();
-        }
+LIGHTING
+  tooDark   : ${yesno(lighting.tooDark)}
+  tooBright : ${yesno(lighting.tooBright)}
+  good      : ${yesno(lighting.good)}
+  average   : ${avgStr}
+
+BLUR
+  blurry   : ${yesno(blur.blurry)}
+  sharp    : ${yesno(blur.sharp)}
+  variance : ${fmt(blur.variance, 2)}
+
+STABILITY
+  stable   : ${yesno(stability.stable)}
+  moving   : ${yesno(stability.moving)}
+  deltaMax : ${deltaStr}
+
+VISIBILITY
+  eyesVisible  : ${yesno(visibility.eyesVisible)}
+  noseVisible  : ${yesno(visibility.noseVisible)}
+  mouthVisible : ${yesno(visibility.mouthVisible)}
+  allVisible   : ${yesno(visibility.allVisible)}
+
+CONFIDENCE : ${fmt(faceData.confidence * 100, 1)}%`;
+
+        FaceAI.ui.updateQualityDebug(report);
       } else {
         resetBuffer();
-        console.log("Quality: no face");
+        FaceAI.ui.updateQualityDebug("NO FACE DETECTED");
       }
     });
-    console.log("Quality module initialized (Stage 5.6)");
+    console.log("Quality module initialized (Stage 5.6, debug detail)");
   }
 
-  /**
-   * Memeriksa posisi wajah.
-   */
-  function checkPosition(bbox, videoWidth, videoHeight) {
-    if (!videoWidth || !videoHeight) {
-      return { centered: false, tooHigh: false, tooLow: false };
-    }
-    const tolerance = FaceAI.config.CENTER_TOLERANCE;
-    const centerX = bbox.x + bbox.width / 2;
-    const centerY = bbox.y + bbox.height / 2;
-    const frameCenterX = videoWidth / 2;
-    const frameCenterY = videoHeight / 2;
-    const offsetX = (centerX - frameCenterX) / videoWidth;
-    const offsetY = (centerY - frameCenterY) / videoHeight;
-    const centered =
-      Math.abs(offsetX) <= tolerance && Math.abs(offsetY) <= tolerance;
-    const tooHigh = offsetY < -tolerance;
-    const tooLow = offsetY > tolerance;
-    return { centered, tooHigh, tooLow };
+  // ----------------------------------------------------------------
+  //  CHECKERS  (tidak berubah, hanya checkStability ditambahkan param bbox)
+  // ----------------------------------------------------------------
+  function checkPosition(bbox, vw, vh) {
+    if (!vw || !vh) return { centered: false, tooHigh: false, tooLow: false };
+    const tol = FaceAI.config.CENTER_TOLERANCE;
+    const cx = bbox.x + bbox.width / 2,
+      cy = bbox.y + bbox.height / 2;
+    const offX = (cx - vw / 2) / vw,
+      offY = (cy - vh / 2) / vh;
+    return {
+      centered: Math.abs(offX) <= tol && Math.abs(offY) <= tol,
+      tooHigh: offY < -tol,
+      tooLow: offY > tol,
+    };
   }
 
-  /**
-   * Memeriksa ukuran wajah.
-   */
-  function checkSize(bbox, videoHeight) {
-    if (!videoHeight || !bbox.height) {
+  function checkSize(bbox, vh) {
+    if (!vh || !bbox.height)
       return { tooSmall: false, tooClose: false, good: false };
-    }
-    const heightRatio = bbox.height / videoHeight;
-    const minRatio = FaceAI.config.MIN_FACE_HEIGHT_RATIO;
-    const maxRatio = FaceAI.config.MAX_FACE_HEIGHT_RATIO;
-    const tooSmall = heightRatio < minRatio;
-    const tooClose = heightRatio > maxRatio;
-    const good = !tooSmall && !tooClose;
-    return { tooSmall, tooClose, good };
+    const ratio = bbox.height / vh;
+    const tooSmall = ratio < FaceAI.config.MIN_FACE_HEIGHT_RATIO;
+    const tooClose = ratio > FaceAI.config.MAX_FACE_HEIGHT_RATIO;
+    return { tooSmall, tooClose, good: !tooSmall && !tooClose };
   }
 
-  /**
-   * Memeriksa pencahayaan.
-   */
   function checkLighting(video, bbox) {
-    if (!video || !bbox || bbox.width <= 0 || bbox.height <= 0) {
+    if (!video || !bbox || bbox.width <= 0 || bbox.height <= 0)
       return { tooDark: false, tooBright: false, good: false, average: -1 };
-    }
     try {
       const canvas = getSampleCanvas();
       canvas.width = bbox.width;
@@ -168,50 +149,41 @@ FaceAI.quality = (function () {
         bbox.width,
         bbox.height,
       );
-      const imageData = ctx.getImageData(0, 0, bbox.width, bbox.height);
-      const pixels = imageData.data;
-      let total = 0,
-        count = 0;
-      const step = Math.max(1, Math.floor(pixels.length / (4 * 100)));
-      for (let i = 0; i < pixels.length; i += 4 * step) {
-        const r = pixels[i],
-          g = pixels[i + 1],
-          b = pixels[i + 2];
-        const gray = 0.299 * r + 0.587 * g + 0.114 * b;
-        total += gray;
-        count++;
+      const imgData = ctx.getImageData(0, 0, bbox.width, bbox.height);
+      const data = imgData.data;
+      let sum = 0,
+        cnt = 0;
+      const step = Math.max(1, Math.floor(data.length / (4 * 100)));
+      for (let i = 0; i < data.length; i += 4 * step) {
+        const gray =
+          0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
+        sum += gray;
+        cnt++;
       }
-      const average = count > 0 ? total / count : 0;
-      const min = FaceAI.config.MIN_BRIGHTNESS;
-      const max = FaceAI.config.MAX_BRIGHTNESS;
-      const tooDark = average < min;
-      const tooBright = average > max;
-      const good = !tooDark && !tooBright;
-      return { tooDark, tooBright, good, average: Math.round(average) };
-    } catch (err) {
-      console.warn("Lighting check failed:", err);
+      const avg = cnt ? sum / cnt : 0;
+      const min = FaceAI.config.MIN_BRIGHTNESS,
+        max = FaceAI.config.MAX_BRIGHTNESS;
+      return {
+        tooDark: avg < min,
+        tooBright: avg > max,
+        good: avg >= min && avg <= max,
+        average: Math.round(avg),
+      };
+    } catch (e) {
       return { tooDark: false, tooBright: false, good: false, average: -1 };
     }
   }
 
-  /**
-   * Memeriksa ketajaman (blur).
-   */
   function checkBlur(video, bbox) {
-    if (!video || !bbox || bbox.width <= 0 || bbox.height <= 0) {
+    if (!video || !bbox || bbox.width <= 0 || bbox.height <= 0)
       return { blurry: true, sharp: false, variance: 0 };
-    }
-    const minFaceHeight = 60;
-    if (bbox.height < minFaceHeight) {
-      return { blurry: true, sharp: false, variance: 0 };
-    }
+    if (bbox.height < 60) return { blurry: true, sharp: false, variance: 0 };
     try {
-      const sampleWidth = FaceAI.config.BLUR_SAMPLE_WIDTH;
-      const scale = sampleWidth / bbox.width;
-      const sampleHeight = Math.round(bbox.height * scale);
+      const sw = FaceAI.config.BLUR_SAMPLE_WIDTH;
+      const sh = Math.round(bbox.height * (sw / bbox.width));
       const canvas = getSampleCanvas();
-      canvas.width = sampleWidth;
-      canvas.height = sampleHeight;
+      canvas.width = sw;
+      canvas.height = sh;
       const ctx = canvas.getContext("2d");
       ctx.drawImage(
         video,
@@ -221,61 +193,59 @@ FaceAI.quality = (function () {
         bbox.height,
         0,
         0,
-        sampleWidth,
-        sampleHeight,
+        sw,
+        sh,
       );
-      const imageData = ctx.getImageData(0, 0, sampleWidth, sampleHeight);
-      const pixels = imageData.data;
-      const gray = new Float32Array(sampleWidth * sampleHeight);
-      for (let i = 0; i < sampleWidth * sampleHeight; i++) {
-        const r = pixels[i * 4];
-        const g = pixels[i * 4 + 1];
-        const b = pixels[i * 4 + 2];
-        gray[i] = 0.299 * r + 0.587 * g + 0.114 * b;
+      const imgData = ctx.getImageData(0, 0, sw, sh);
+      const data = imgData.data;
+      const gray = new Float32Array(sw * sh);
+      for (let i = 0; i < sw * sh; i++) {
+        gray[i] =
+          0.299 * data[i * 4] +
+          0.587 * data[i * 4 + 1] +
+          0.114 * data[i * 4 + 2];
       }
-      const laplacian = new Float32Array(sampleWidth * sampleHeight);
+      // Laplacian
+      const lap = new Float32Array(sw * sh);
       let sum = 0,
         sumSq = 0,
-        count = 0;
-      for (let y = 1; y < sampleHeight - 1; y++) {
-        for (let x = 1; x < sampleWidth - 1; x++) {
-          const idx = y * sampleWidth + x;
+        cnt = 0;
+      for (let y = 1; y < sh - 1; y++) {
+        for (let x = 1; x < sw - 1; x++) {
+          const idx = y * sw + x;
           const val =
-            gray[idx - sampleWidth - 1] * 0 +
-            gray[idx - sampleWidth] * 1 +
-            gray[idx - sampleWidth + 1] * 0 +
+            gray[idx - sw - 1] * 0 +
+            gray[idx - sw] * 1 +
+            gray[idx - sw + 1] * 0 +
             gray[idx - 1] * 1 +
             gray[idx] * -4 +
             gray[idx + 1] * 1 +
-            gray[idx + sampleWidth - 1] * 0 +
-            gray[idx + sampleWidth] * 1 +
-            gray[idx + sampleWidth + 1] * 0;
-          laplacian[idx] = val;
+            gray[idx + sw - 1] * 0 +
+            gray[idx + sw] * 1 +
+            gray[idx + sw + 1] * 0;
+          lap[idx] = val;
           sum += val;
           sumSq += val * val;
-          count++;
+          cnt++;
         }
       }
-      if (count === 0) return { blurry: true, sharp: false, variance: 0 };
-      const mean = sum / count;
-      const variance = sumSq / count - mean * mean;
-      const threshold = FaceAI.config.BLUR_THRESHOLD;
-      const blurry = variance < threshold;
+      if (!cnt) return { blurry: true, sharp: false, variance: 0 };
+      const mean = sum / cnt;
+      const variance = sumSq / cnt - mean * mean;
+      const thresh = FaceAI.config.BLUR_THRESHOLD;
       return {
-        blurry,
-        sharp: !blurry,
+        blurry: variance < thresh,
+        sharp: variance >= thresh,
         variance: Math.round(variance * 100) / 100,
       };
-    } catch (err) {
-      console.warn("Blur check failed:", err);
+    } catch (e) {
       return { blurry: true, sharp: false, variance: 0 };
     }
   }
 
-  /**
-   * Memeriksa stabilitas wajah.
-   */
-  function checkStability(videoWidth) {
+  function checkStability(videoWidth, bbox) {
+    // Tambahkan pusat wajah ke buffer (dipanggil dari luar, jadi kita pakai buffer global)
+    // Di sini kita hanya hitung stabilitas berdasarkan buffer yang sudah ada.
     const threshold = FaceAI.config.STABILITY_MOVEMENT_THRESHOLD * videoWidth;
     const count = FaceAI.config.STABILITY_FRAME_COUNT;
     if (_centerBuffer.length < count) {
@@ -285,8 +255,8 @@ FaceAI.quality = (function () {
     for (let i = 0; i < _centerBuffer.length - 1; i++) {
       const dx = _centerBuffer[i].x - _centerBuffer[i + 1].x;
       const dy = _centerBuffer[i].y - _centerBuffer[i + 1].y;
-      const dist = Math.sqrt(dx * dx + dy * dy);
-      if (dist > maxDelta) maxDelta = dist;
+      const d = Math.sqrt(dx * dx + dy * dy);
+      if (d > maxDelta) maxDelta = d;
     }
     const stable = maxDelta < threshold;
     return {
@@ -296,33 +266,27 @@ FaceAI.quality = (function () {
     };
   }
 
-  /**
-   * Memeriksa visibilitas fitur wajah berdasarkan landmark.
-   * BlazeFace 6‑titik: 0=mata kanan, 1=mata kiri, 2=hidung, 3=mulut, 4=telinga kanan, 5=telinga kiri.
-   * @param {Array|null} landmarks - array of {x, y} atau null jika tidak tersedia
-   * @returns {{ eyesVisible: boolean, noseVisible: boolean, mouthVisible: boolean, allVisible: boolean }}
-   */
   function checkVisibility(landmarks) {
-    if (!landmarks || landmarks.length < 4) {
+    if (!landmarks || landmarks.length < 4)
       return {
         eyesVisible: false,
         noseVisible: false,
         mouthVisible: false,
         allVisible: false,
       };
-    }
-
-    const rightEye = landmarks[0]; // mata kanan
-    const leftEye = landmarks[1]; // mata kiri
-    const nose = landmarks[2]; // hidung
-    const mouth = landmarks[3]; // mulut
-
+    const rightEye = landmarks[0],
+      leftEye = landmarks[1];
+    const nose = landmarks[2],
+      mouth = landmarks[3];
     const eyesVisible = rightEye != null && leftEye != null;
     const noseVisible = nose != null;
     const mouthVisible = mouth != null;
-    const allVisible = eyesVisible && noseVisible && mouthVisible;
-
-    return { eyesVisible, noseVisible, mouthVisible, allVisible };
+    return {
+      eyesVisible,
+      noseVisible,
+      mouthVisible,
+      allVisible: eyesVisible && noseVisible && mouthVisible,
+    };
   }
 
   return { init };
