@@ -18,9 +18,10 @@ FaceAI.state = (function () {
     "CAMERA_READY",
     "DETECTING",
     "FACE_FOUND",
-    "FACE_STABLE",
-    "READY_TO_CAPTURE",
-    "CAPTURED",
+    "FACE_READY", // ← tambah
+    "CAPTURING", // ← tambah (untuk M6)
+    "CAPTURED", // ← tambah (untuk M6)
+    "READY_TO_CAPTURE", // bisa juga ditambah kalau ada di rencana
     "RECOGNIZED",
   ];
 
