@@ -1,8 +1,8 @@
 /**
  * FaceAI Quality Assessment Module
- * Version: 0.1 – Milestone 5 Stage 5.4
+ * Version: 0.1 – Milestone 5 Stage 5.5
  *
- * Menilai kualitas wajah: posisi, ukuran, pencahayaan, ketajaman (blur).
+ * Menilai kualitas wajah: posisi, ukuran, pencahayaan, ketajaman (blur), stabilitas.
  */
 "use strict";
 
@@ -20,6 +20,23 @@ FaceAI.quality = (function () {
   }
 
   // ==========================================
+  // Private – Buffer posisi untuk stabilitas
+  // ==========================================
+  let _centerBuffer = []; // array of {x, y}
+
+  function addCenter(x, y) {
+    _centerBuffer.push({ x, y });
+    const maxLen = FaceAI.config.STABILITY_FRAME_COUNT;
+    while (_centerBuffer.length > maxLen) {
+      _centerBuffer.shift();
+    }
+  }
+
+  function resetBuffer() {
+    _centerBuffer = [];
+  }
+
+  // ==========================================
   // Public API
   // ==========================================
 
@@ -34,20 +51,29 @@ FaceAI.quality = (function () {
         const position = checkPosition(faceData.bbox, videoW, videoH);
         const size = checkSize(faceData.bbox, videoH);
         const lighting = checkLighting(videoEl, faceData.bbox);
-        const blur = checkBlur(videoEl, faceData.bbox); // baru
+        const blur = checkBlur(videoEl, faceData.bbox);
+
+        // Stabilitas: lacak pusat wajah
+        const centerX = faceData.bbox.x + faceData.bbox.width / 2;
+        const centerY = faceData.bbox.y + faceData.bbox.height / 2;
+        addCenter(centerX, centerY);
+        const stability = checkStability(videoW);
 
         console.log("Quality checks:", {
           position,
           size,
           lighting,
-          blur, // baru
+          blur,
+          stability, // baru
           confidence: faceData.confidence,
         });
       } else {
+        // Reset buffer saat tidak ada wajah
+        resetBuffer();
         console.log("Quality: no face");
       }
     });
-    console.log("Quality module initialized (Stage 5.4)");
+    console.log("Quality module initialized (Stage 5.5)");
   }
 
   /**
@@ -137,28 +163,20 @@ FaceAI.quality = (function () {
   }
 
   /**
-   * Memeriksa ketajaman (blur) menggunakan varians Laplacian.
-   * @param {HTMLVideoElement} video
-   * @param {Object} bbox
-   * @returns {{ blurry: boolean, sharp: boolean, variance: number }}
+   * Memeriksa ketajaman (blur).
    */
   function checkBlur(video, bbox) {
     if (!video || !bbox || bbox.width <= 0 || bbox.height <= 0) {
       return { blurry: true, sharp: false, variance: 0 };
     }
-
-    // Jika wajah terlalu kecil, tidak bisa dinilai dengan akurat → anggap blur
-    const minFaceHeight = 60; // piksel minimum untuk analisis yang andal
+    const minFaceHeight = 60;
     if (bbox.height < minFaceHeight) {
       return { blurry: true, sharp: false, variance: 0 };
     }
-
     try {
       const sampleWidth = FaceAI.config.BLUR_SAMPLE_WIDTH;
       const scale = sampleWidth / bbox.width;
       const sampleHeight = Math.round(bbox.height * scale);
-
-      // Resize area wajah ke ukuran kecil untuk efisiensi
       const canvas = getSampleCanvas();
       canvas.width = sampleWidth;
       canvas.height = sampleHeight;
@@ -174,20 +192,15 @@ FaceAI.quality = (function () {
         sampleWidth,
         sampleHeight,
       );
-
       const imageData = ctx.getImageData(0, 0, sampleWidth, sampleHeight);
       const pixels = imageData.data;
       const gray = new Float32Array(sampleWidth * sampleHeight);
-
-      // Konversi ke grayscale
       for (let i = 0; i < sampleWidth * sampleHeight; i++) {
         const r = pixels[i * 4];
         const g = pixels[i * 4 + 1];
         const b = pixels[i * 4 + 2];
         gray[i] = 0.299 * r + 0.587 * g + 0.114 * b;
       }
-
-      // Konvolusi Laplacian 3x3
       const laplacian = new Float32Array(sampleWidth * sampleHeight);
       let sum = 0,
         sumSq = 0,
@@ -211,14 +224,9 @@ FaceAI.quality = (function () {
           count++;
         }
       }
-
-      if (count === 0) {
-        return { blurry: true, sharp: false, variance: 0 };
-      }
-
+      if (count === 0) return { blurry: true, sharp: false, variance: 0 };
       const mean = sum / count;
       const variance = sumSq / count - mean * mean;
-
       const threshold = FaceAI.config.BLUR_THRESHOLD;
       const blurry = variance < threshold;
       return {
@@ -230,6 +238,34 @@ FaceAI.quality = (function () {
       console.warn("Blur check failed:", err);
       return { blurry: true, sharp: false, variance: 0 };
     }
+  }
+
+  /**
+   * Memeriksa stabilitas wajah berdasarkan pergerakan pusat.
+   * @param {number} videoWidth - lebar frame untuk normalisasi threshold
+   * @returns {{ stable: boolean, moving: boolean, deltaMax: number }}
+   */
+  function checkStability(videoWidth) {
+    const threshold = FaceAI.config.STABILITY_MOVEMENT_THRESHOLD * videoWidth;
+    const count = FaceAI.config.STABILITY_FRAME_COUNT;
+    if (_centerBuffer.length < count) {
+      return { stable: false, moving: true, deltaMax: Infinity };
+    }
+
+    // Hitung jarak maksimum antar dua titik dalam buffer
+    let maxDelta = 0;
+    for (let i = 0; i < _centerBuffer.length - 1; i++) {
+      const dx = _centerBuffer[i].x - _centerBuffer[i + 1].x;
+      const dy = _centerBuffer[i].y - _centerBuffer[i + 1].y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist > maxDelta) maxDelta = dist;
+    }
+    const stable = maxDelta < threshold;
+    return {
+      stable,
+      moving: !stable,
+      deltaMax: Math.round(maxDelta * 10) / 10,
+    };
   }
 
   return { init };

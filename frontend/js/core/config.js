@@ -58,4 +58,8 @@ FaceAI.config = {
   // Quality Check – Blur (Stage 5.4)
   BLUR_THRESHOLD: 100, // nilai varians Laplacian minimum agar dianggap tajam
   BLUR_SAMPLE_WIDTH: 100, // lebar canvas sampling untuk efisiensi
+
+  // Quality Check – Stability (Stage 5.5)
+  STABILITY_FRAME_COUNT: 10, // jumlah frame yang dilacak
+  STABILITY_MOVEMENT_THRESHOLD: 0.05, // 5% lebar frame
 };
