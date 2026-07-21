@@ -6,7 +6,7 @@ from fastapi import APIRouter, UploadFile, File, HTTPException
 router = APIRouter(prefix="/api")
 
 # Konfigurasi (bisa dipindahkan ke config nanti)
-UPLOAD_DIR = Path("backend/uploads")
+UPLOAD_DIR = Path("uploads")
 ALLOWED_EXTENSIONS = {".jpg", ".jpeg", ".png"}
 MAX_UPLOAD_SIZE = 5 * 1024 * 1024  # 5 MB
 
