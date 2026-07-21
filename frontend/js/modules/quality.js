@@ -1,6 +1,6 @@
 /**
  * FaceAI Quality Assessment Module
- * Version: 0.1 – Milestone 5 Stage 5.6 (debug detail)
+ * Version: 0.1 – Milestone 5 Stage 5.6 (fixed stability)
  *
  * Menilai kualitas wajah: posisi, ukuran, pencahayaan, blur, stabilitas, visibilitas.
  * Menampilkan SEMUA detail di panel debug HTML.
@@ -47,16 +47,22 @@ FaceAI.quality = (function () {
         const size = checkSize(faceData.bbox, vh);
         const lighting = checkLighting(videoEl, faceData.bbox);
         const blur = checkBlur(videoEl, faceData.bbox);
-        const stability = checkStability(vw, faceData.bbox);
+
+        // Stabilitas: perbarui buffer pusat wajah
+        const centerX = faceData.bbox.x + faceData.bbox.width / 2;
+        const centerY = faceData.bbox.y + faceData.bbox.height / 2;
+        addCenter(centerX, centerY); // ← PERBAIKAN: isi buffer
+        const stability = checkStability(vw);
+
         const visibility = checkVisibility(
           faceData.landmarks,
           videoEl,
           faceData.bbox,
         );
 
-        // Format angka untuk tampilan
-        const fmt = (val, decimals = 1) =>
-          typeof val === "number" ? val.toFixed(decimals) : String(val);
+        // Format laporan detail
+        const fmt = (val, dec = 1) =>
+          typeof val === "number" ? val.toFixed(dec) : String(val);
         const yesno = (b) => (b ? "true" : "false");
         const deltaStr =
           stability.deltaMax === Infinity
@@ -105,11 +111,11 @@ CONFIDENCE : ${fmt(faceData.confidence * 100, 1)}%`;
         FaceAI.ui.updateQualityDebug("NO FACE DETECTED");
       }
     });
-    console.log("Quality module initialized (Stage 5.6, debug detail)");
+    console.log("Quality module initialized (Stage 5.6, fixed)");
   }
 
   // ----------------------------------------------------------------
-  //  CHECKERS  (tidak berubah, hanya checkStability ditambahkan param bbox)
+  //  CHECKERS
   // ----------------------------------------------------------------
   function checkPosition(bbox, vw, vh) {
     if (!vw || !vh) return { centered: false, tooHigh: false, tooLow: false };
@@ -209,7 +215,6 @@ CONFIDENCE : ${fmt(faceData.confidence * 100, 1)}%`;
           0.587 * data[i * 4 + 1] +
           0.114 * data[i * 4 + 2];
       }
-      // Laplacian
       const lap = new Float32Array(sw * sh);
       let sum = 0,
         sumSq = 0,
@@ -247,9 +252,7 @@ CONFIDENCE : ${fmt(faceData.confidence * 100, 1)}%`;
     }
   }
 
-  function checkStability(videoWidth, bbox) {
-    // Tambahkan pusat wajah ke buffer (dipanggil dari luar, jadi kita pakai buffer global)
-    // Di sini kita hanya hitung stabilitas berdasarkan buffer yang sudah ada.
+  function checkStability(videoWidth) {
     const threshold = FaceAI.config.STABILITY_MOVEMENT_THRESHOLD * videoWidth;
     const count = FaceAI.config.STABILITY_FRAME_COUNT;
     if (_centerBuffer.length < count) {
@@ -270,14 +273,6 @@ CONFIDENCE : ${fmt(faceData.confidence * 100, 1)}%`;
     };
   }
 
-  /**
-   * Memeriksa visibilitas fitur wajah dengan kombinasi keberadaan landmark
-   * dan analisis varians patch di sekitar mata & mulut.
-   * @param {Array|null} landmarks
-   * @param {HTMLVideoElement} video
-   * @param {Object} bbox - bounding box wajah {x,y,width,height}
-   * @returns {{ eyesVisible, noseVisible, mouthVisible, allVisible }}
-   */
   function checkVisibility(landmarks, video, bbox) {
     if (!landmarks || landmarks.length < 4) {
       return {
@@ -287,58 +282,32 @@ CONFIDENCE : ${fmt(faceData.confidence * 100, 1)}%`;
         allVisible: false,
       };
     }
-
-    const rightEye = landmarks[0];
-    const leftEye = landmarks[1];
-    const nose = landmarks[2];
-    const mouth = landmarks[3];
-
-    // Keberadaan landmark (tidak null) adalah syarat dasar
+    const rightEye = landmarks[0],
+      leftEye = landmarks[1];
+    const nose = landmarks[2],
+      mouth = landmarks[3];
     let eyesVisible = rightEye != null && leftEye != null;
     let noseVisible = nose != null;
     let mouthVisible = mouth != null;
 
-    // Jika landmark ada, lakukan pengecekan varians patch untuk mata dan mulut
     if (eyesVisible && video && bbox) {
       eyesVisible =
-        checkPatchVariance(
-          video,
-          rightEye,
-          bbox,
-          FaceAI.config.EYE_PATCH_SIZE,
-        ) >= FaceAI.config.EYE_VARIANCE_THRESHOLD &&
-        checkPatchVariance(
-          video,
-          leftEye,
-          bbox,
-          FaceAI.config.EYE_PATCH_SIZE,
-        ) >= FaceAI.config.EYE_VARIANCE_THRESHOLD;
+        checkPatchVariance(video, rightEye, FaceAI.config.EYE_PATCH_SIZE) >=
+          FaceAI.config.EYE_VARIANCE_THRESHOLD &&
+        checkPatchVariance(video, leftEye, FaceAI.config.EYE_PATCH_SIZE) >=
+          FaceAI.config.EYE_VARIANCE_THRESHOLD;
     }
     if (mouthVisible && video && bbox) {
       mouthVisible =
-        checkPatchVariance(
-          video,
-          mouth,
-          bbox,
-          FaceAI.config.MOUTH_PATCH_SIZE,
-        ) >= FaceAI.config.MOUTH_VARIANCE_THRESHOLD;
+        checkPatchVariance(video, mouth, FaceAI.config.MOUTH_PATCH_SIZE) >=
+        FaceAI.config.MOUTH_VARIANCE_THRESHOLD;
     }
-
     const allVisible = eyesVisible && noseVisible && mouthVisible;
     return { eyesVisible, noseVisible, mouthVisible, allVisible };
   }
 
-  /**
-   * Mengambil patch persegi di sekitar landmark, menghitung varians grayscale.
-   * @param {HTMLVideoElement} video
-   * @param {{x,y}} landmark - koordinat relatif (0-1)
-   * @param {Object} bbox - bounding box wajah
-   * @param {number} patchSize - ukuran patch dalam piksel
-   * @returns {number} varians, atau 0 jika gagal
-   */
-  function checkPatchVariance(video, landmark, bbox, patchSize) {
+  function checkPatchVariance(video, landmark, patchSize) {
     try {
-      // Konversi landmark relatif ke koordinat piksel pada video
       const lx = landmark.x * video.videoWidth;
       const ly = landmark.y * video.videoHeight;
       const half = patchSize / 2;
@@ -367,8 +336,7 @@ CONFIDENCE : ${fmt(faceData.confidence * 100, 1)}%`;
       }
       if (count === 0) return 0;
       const mean = sum / count;
-      const variance = sumSq / count - mean * mean;
-      return variance;
+      return sumSq / count - mean * mean;
     } catch (e) {
       return 0;
     }
