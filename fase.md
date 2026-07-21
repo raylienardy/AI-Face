@@ -1,254 +1,248 @@
-# Dokumen Perencanaan Milestone 6 — Auto Capture (Workflow Fotografi Cerdas)
+# Milestone 7 — Backend Integration: Evaluasi & Perancangan
 
-**Versi:** 1.0  
-**Status:** Draft untuk persetujuan Founder  
+**Status:** Draft  
 **Peran:** Senior AI Engineer
 
 ---
 
-## 1. Evaluasi Deliverables Milestone 6
+## Step 1 — Recall Knowledge dari Empat Repositori
 
-| Deliverable                               | Keputusan      | Alasan Teknis & Pengalaman Repositori                                                                                                                                                                       |
-| ----------------------------------------- | -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Countdown**                             | ✅ Pertahankan | Memberi waktu pengguna untuk stabilisasi akhir. Durasi pendek (3 detik) sudah cukup. Semua repositori menekankan konsistensi gambar; countdown mengurangi variasi gerakan mendadak.                         |
-| **Auto Capture**                          | ✅ Pertahankan | Inti milestone. Dari DeepFace dan MEBeauty: gambar diam dipilih secara otomatis setelah kondisi ideal tercapai, bukan manual. Mengurangi human error.                                                       |
-| **Cancel Countdown**                      | ✅ Pertahankan | Sangat penting. Jika kualitas turun di tengah countdown, gambar yang dihasilkan tidak akan optimal. Logika pembatalan harus ketat dan instan, seperti yang diterapkan pada sistem biometrik modern (e‑KYC). |
-| **Freeze Frame**                          | ✅ Pertahankan | Harus ada preview beku agar pengguna bisa menilai hasilnya. Mirip dengan preview hasil scan di aplikasi dokumen.                                                                                            |
-| **Preview Image**                         | ✅ Pertahankan | Konfirmasi visual pengguna. DeepFace tidak memproses frame mentah; ia membutuhkan input gambar. Preview memungkinkan pengguna memastikan wajah tertangkap dengan baik.                                      |
-| **Retake Button**                         | ✅ Pertahankan | Memberi kontrol penuh. Jika pengguna tidak puas (ekspresi, kedipan, dll.), bisa langsung mengulang tanpa harus kembali ke layar awal. UX standar aplikasi kamera.                                           |
-| **Continue Button**                       | ✅ Pertahankan | Gerbang menuju milestone backend. Hanya setelah pengguna menekan "Continue", gambar dikirim untuk analisis. Ini menjaga prinsip "capture then analyze".                                                     |
-| _(Tambahan)_ **Capture Source Selection** | ❌ Tunda       | Tidak perlu di Milestone 6. Kita hanya menggunakan kamera default. Jika nanti mau tambah upload gambar dari file, bisa di milestone terpisah.                                                               |
-| _(Tambahan)_ **Exposure/Focus Lock**      | ❌ Tunda       | Terlalu dini. Bisa menjadi perbaikan di Milestone 12 (UI/Performance). Saat ini kamera otomatis sudah cukup baik.                                                                                           |
+### Facial Beauty Prediction
 
-**Kesimpulan:** Semua deliverables asli dipertahankan. Tidak ada yang perlu dihapus atau digeser. Milestone ini sudah terdefinisi dengan baik.
+- **Pelajaran penting:** Model bekerja pada gambar yang sudah diproses sepenuhnya, bukan pada stream. Seluruh pipeline inferensi bergantung pada input gambar yang sudah bersih dan konsisten.
+- **Pipeline:** Preprocess gambar → forward ke backbone CNN → ambil distribusi skor.
+- **Preprocessing:** Gambar di-resize, dinormalisasi (meskipun ada inkonsistensi di kode). Kualitas input sangat mempengaruhi output.
+- **Deployment/inference:** Model PyTorch disimpan dan dimuat ulang. Inferensi dilakukan pada gambar tunggal.
+- **Layak diadopsi:** Pemisahan tegas antara capture dan analisis. Gambar statis adalah unit kerja backend.
+- **Hindari:** Inkonsistensi preprocessing antara training dan inference. Tidak ada normalisasi standar.
+
+### face-rating
+
+- **Feature engineering:** Geometri wajah (rasio landmark) adalah fitur kuat tetapi harus dihitung dari gambar yang sudah di-crop dan di-align.
+- **Workflow:** Landmark diekstrak dari gambar diam, bukan dari video.
+- **Pelajaran:** Backend harus menerima gambar yang sudah siap, tetapi preprocessing berat (alignment, crop) sebaiknya dilakukan di backend agar konsisten.
+
+### MEBeauty
+
+- **Pipeline:** Deteksi wajah → crop & alignment (di backend) → resize → normalisasi → model regresi.
+- **Backend flow:** Gambar mentah diunggah → preprocessing → inferensi → hasil dikembalikan.
+- **Penting:** Preprocessing yang konsisten dan terpisah dari frontend sangat krusial.
+- **Deployment:** Model PyTorch di backend, API menerima gambar.
+
+### DeepFace
+
+- **Pipeline:**  
+  Detect  
+  ↓  
+  Align  
+  ↓  
+  Normalize  
+  ↓  
+  Represent  
+  ↓  
+  Verify / Analyze
+- **Kenapa sangat baik:** Setiap tahap berdiri sendiri, mudah diuji, dan bisa diganti tanpa merusak yang lain. Pipeline ini menjadi cetak biru backend FaceAI.
 
 ---
 
-## 2. Pemecahan Milestone 6 Menjadi Stage
+## Step 2 — Ingat Tujuan FaceAI
 
-### Stage 6.1 — Capture Service (Freeze Frame)
+Frontend hanya bertugas menangkap foto terbaik. Backend melakukan **seluruh** analisis AI. Tidak ada inferensi real‑time di browser. Milestone 7 adalah jembatan antara keduanya: **mengirim foto dari frontend ke backend dengan aman dan andal**.
 
-**Tujuan:**  
-Menyediakan fungsi untuk mengambil frame statis dari elemen video dan mengembalikannya sebagai objek gambar (canvas/data URL).
+---
 
-**Alasan:**  
-Memisahkan logika capture dari alur countdown dan UI. Memungkinkan pengujian independen tanpa mengganggu pipeline deteksi.
+## Step 3 — Evaluasi Milestone 7
+
+Deliverable yang diusulkan (Upload API, Multipart Upload, Progress Indicator, Error Handling, Response Handling) sudah mencakup kebutuhan dasar komunikasi frontend‑backend. Namun, berdasarkan praktik terbaik dari keempat repositori, saya menambahkan:
+
+- **Validasi ukuran dan format gambar** di sisi server agar tidak menerima file sembarangan.
+- **Response standar** (JSON) yang konsisten, mencakup status, ID gambar, dan error message.
+- **Logging** dasar di backend untuk memudahkan debugging.
+- **Konfigurasi endpoint** yang terpusat di frontend (`config.js`) dan backend (environment variable).
+
+Tidak ada yang perlu dihapus. Urutan stage juga sudah logis: mulai dari API sederhana, lalu integrasi frontend, baru feedback pengguna.
+
+---
+
+## Step 4 — Pemecahan Menjadi Stage
+
+### Stage 7.1 — Backend Upload Endpoint
+
+**Objective:**  
+Membuat endpoint FastAPI yang menerima file gambar (multipart/form-data), memvalidasi, menyimpan sementara di folder `backend/uploads/`.
 
 **Deliverables:**
 
-- Modul baru `capture.js` dengan method `takeSnapshot(videoElement)` yang menghasilkan `HTMLCanvasElement`.
-- Method `toDataURL()` untuk mendapatkan gambar dalam format yang bisa ditampilkan.
+- Endpoint `POST /api/upload`
+- Validasi ekstensi (jpg, png) dan ukuran maksimal (5 MB).
+- Simpan file dengan nama unik (UUID) di `backend/uploads/`.
+- Response JSON: `{ "status": "ok", "filename": "...", "message": "..." }` atau `{ "status": "error", "message": "..." }`.
+- Menambahkan `python-multipart` ke `requirements.txt`.
 
-**Definition of Done:**
+**Files yang berubah:**
 
-- `FaceAI.capture.takeSnapshot(video)` mengembalikan canvas yang berisi frame video saat itu.
-- Canvas tidak terpengaruh oleh overlay (bounding box, countdown) karena diambil dari elemen video, bukan dari layar.
+- `backend/app/main.py` – tambah router upload
+- `backend/app/api/upload.py` – file baru
+- `backend/requirements.txt`
+- `backend/uploads/` – folder baru (di-gitignore)
 
-**Test:**
+**Output:**  
+Kirim file via Postman/curl ke `http://localhost:8000/api/upload` → file tersimpan di `uploads/` dan response JSON sukses.
 
-- Panggil `FaceAI.capture.takeSnapshot(FaceAI.ui.getVideoElement())` dari console, lalu `canvas.toDataURL()` untuk menampilkan gambar di tab baru.
+**Testing:**
 
-**Edge Case:**
+- Upload file jpg/png → sukses.
+- Upload file txt atau tanpa file → error 400.
+- File > 5 MB → error 413.
 
-- Video belum siap (dimensi 0) → return null.
-
-**Risiko:**
-
-- Canvas mungkin kosong jika video tidak memiliki metadata. Kita sudah menunggu `readyState >= 2` di modul kamera, jadi aman.
-
-**Catatan Engineering:**
-
-- Gunakan `canvas.width = video.videoWidth; canvas.height = video.videoHeight; ctx.drawImage(video, 0, 0);`. Tidak perlu resize, agar gambar asli penuh. Resize akan dilakukan di backend.
-
-**File yang berubah:**
-
-- `frontend/js/modules/capture.js` (file baru)
-- `frontend/index.html` – tambahkan script `capture.js`
+**Dependency:** Tidak ada (backend mandiri).
 
 ---
 
-### Stage 6.2 — Countdown Timer & UI
+### Stage 7.2 — Frontend Upload Service
 
-**Tujuan:**  
-Menampilkan countdown visual di atas video saat status mencapai `FACE_READY`, dan membatalkannya jika kualitas turun.
-
-**Alasan:**  
-Memberi waktu pengguna untuk bersiap dan memastikan stabilitas akhir. Countdown yang terlihat jelas mengurangi ketidakpastian.
+**Objective:**  
+Membuat service `upload.js` di frontend yang mengirimkan canvas hasil capture ke backend menggunakan `fetch` dengan `FormData`.
 
 **Deliverables:**
 
-- Elemen overlay countdown di HTML (misal, `<div id="countdown-overlay">` dengan teks besar).
-- Modul `countdown.js` (atau terintegrasi ke `capture.js`) yang mendengarkan perubahan state dan mengelola timer 3 detik.
-- Logika pembatalan: setiap perubahan state dari `FACE_READY` ke selain itu, countdown dibatalkan, overlay disembunyikan.
-- Visual hitung mundur: "3", "2", "1" setiap detik.
+- Fungsi `FaceAI.upload.send(canvas)` yang:
+  - Mengonversi canvas ke Blob (JPEG, kualitas 0.9).
+  - Membuat `FormData` dan mengirim via `POST` ke URL di `config.BACKEND_UPLOAD_URL`.
+  - Mengembalikan Promise dengan response JSON.
+- Tambahan konfigurasi di `config.js`: `BACKEND_UPLOAD_URL: 'http://localhost:8000/api/upload'`.
+- Menghubungkan tombol "Continue" di `capture.js` untuk memanggil `FaceAI.upload.send()`.
+- Basic error handling: jika jaringan gagal, tampilkan pesan error.
 
-**Definition of Done:**
+**Files yang berubah:**
 
-- Saat state `FACE_READY` bertahan, countdown muncul dan berjalan dari 3 ke 1.
-- Jika state berubah menjadi selain `FACE_READY` sebelum countdown selesai, overlay menghilang dan timer direset.
+- `frontend/js/modules/upload.js` – file baru
+- `frontend/js/core/config.js`
+- `frontend/js/modules/capture.js` – modifikasi handler "Continue"
+- `frontend/index.html` – tambahkan script `upload.js`
 
-**Test:**
+**Output:**  
+Klik "Continue" setelah capture → console log response dari backend `{ status: "ok", filename: "..." }`. Gambar tersimpan di backend.
 
-- Biarkan wajah ready → countdown muncul.
-- Gerakkan wajah saat countdown → countdown batal, hilang.
-- Setelah batal, kembali ready → countdown mulai dari awal (reset).
+**Testing:**
 
-**Edge Case:**
+- Capture, klik Continue → cek console untuk response sukses.
+- Matikan backend → klik Continue → muncul pesan error.
 
-- Koneksi lambat? Tidak relevan, semua local.
-- Countdown selesai tapi tepat saat itu wajah bergerak → capture boleh gagal? Kita akan verifikasi ulang quality tepat sebelum capture. Jadi di Stage 6.3 kita cek lagi.
-
-**Risiko:**
-
-- Overlay countdown dapat menutupi indikator lain. Letakkan di tengah area video dengan z-index tinggi.
-
-**File yang berubah:**
-
-- `frontend/index.html` – tambah `<div id="countdown-overlay">`
-- `frontend/css/style.css` – gaya overlay
-- `frontend/js/modules/capture.js` – logika countdown
-- `frontend/js/ui/ui.js` – tambah method `showCountdown`, `hideCountdown`
+**Dependency:** Stage 7.1 harus selesai (backend endpoint sudah berfungsi).
 
 ---
 
-### Stage 6.3 — Auto Capture Trigger
+### Stage 7.3 — Upload Progress & Feedback
 
-**Tujuan:**  
-Mengambil gambar secara otomatis segera setelah countdown selesai, dengan verifikasi ulang kualitas pada detik terakhir.
-
-**Alasan:**  
-Ini adalah inti milestone. Gambar diambil tanpa intervensi manual, memastikan momen yang tepat.
+**Objective:**  
+Menampilkan indikator progres upload (spinner/teks "Uploading…") dan mengunci tombol "Continue" selama proses upload agar tidak double‑submit.
 
 **Deliverables:**
 
-- Di akhir countdown (setelah menampilkan "1" dan jeda), panggil `FaceAI.capture.takeSnapshot(videoElement)`.
-- Simpan canvas hasil capture di properti internal (misal `lastCapture`).
-- Hentikan loop deteksi untuk membebaskan sumber daya? Tidak perlu, kita hanya freeze tampilan. Loop deteksi tetap berjalan untuk mendeteksi perubahan (tapi video akan kita ganti dengan gambar statis di stage berikutnya).
+- Di `capture.js`, saat upload dimulai:
+  - Tampilkan teks "Uploading…" di tombol Continue dan disable.
+  - Jika sukses, tampilkan "Upload Successful!" sebentar, lalu set state `RESULT_READY` (atau tetap `CAPTURED` untuk sekarang).
+  - Jika gagal, tampilkan pesan error dan enable kembali tombol.
+- Modifikasi `ui.js` untuk mendukung perubahan teks tombol dan disable.
 
-**Definition of Done:**
+**Files yang berubah:**
 
-- Setelah countdown habis, frame video saat itu diambil menjadi canvas.
-- Canvas disimpan dan dapat diakses oleh modul lain.
+- `frontend/js/modules/capture.js`
+- `frontend/js/ui/ui.js`
 
-**Test:**
+**Output:**  
+Setelah klik Continue, tombol berubah menjadi "Uploading…" (disabled), lalu berubah menjadi "Upload Successful!" (atau "Upload Failed, Retry") sesuai hasil.
 
-- Saat ready, setelah countdown "3,2,1", console log atau tampilkan gambar capture.
+**Testing:**
 
-**Edge Case:**
+- Upload normal → tombol berubah sesuai tahapan.
+- Matikan koneksi saat upload → tombol kembali enable dan pesan error muncul.
+- Klik ganda tombol → hanya satu upload yang terkirim (karena disabled).
 
-- Jika tepat sebelum capture kualitas turun (misal wajah hilang), countdown seharusnya sudah batal. Kita tambahkan pengecekan `FaceAI.state.is('FACE_READY')` tepat sebelum mengambil snapshot; jika tidak, batalkan capture.
-
-**Risiko:**
-
-- Capture mungkin mengambil frame dengan countdown masih terlihat jika timing tidak pas. Kita sembunyikan overlay countdown sebelum mengambil snapshot (delay 100ms setelah overlay hilang).
-
-**File yang berubah:**
-
-- `frontend/js/modules/capture.js` – trigger capture.
+**Dependency:** Stage 7.2 (upload service) harus selesai.
 
 ---
 
-### Stage 6.4 — Preview & Confirm UI
+### Stage 7.4 — Error Handling & Retry
 
-**Tujuan:**  
-Menampilkan hasil capture sebagai gambar diam, dan memberikan pilihan kepada pengguna untuk mengulangi atau melanjutkan.
-
-**Alasan:**  
-Memberi kendali penuh kepada pengguna sebelum gambar dikirim ke backend. Sesuai dengan filosofi FaceAI: human-in-the-loop.
+**Objective:**  
+Menangani kegagalan upload dengan pesan yang jelas dan memberikan opsi untuk mencoba ulang (Retry) tanpa harus mengulang capture.
 
 **Deliverables:**
 
-- Sembunyikan video stream, tampilkan canvas hasil capture di area yang sama (atau di atasnya).
-- Tampilkan dua tombol: "Retake" dan "Continue".
-- Tombol "Retake": menghapus preview, menampilkan kembali video stream, mengaktifkan kembali deteksi, mereset state ke `IDLE` atau langsung ke `CAMERA_READY`.
-- Tombol "Continue": (untuk Milestone 7) akan men-trigger unggahan gambar. Saat ini cukup set state `CAPTURED` dan simulasikan logika lanjutan.
+- Modifikasi handler "Continue": jika upload gagal, tombol kembali aktif dengan teks "Retry Upload".
+- Error dibedakan: jaringan (fetch error), server error (5xx), validasi (4xx), timeout.
+- Pesan error ditampilkan di area error umum (`FaceAI.ui.showError`).
+- Retry hanya mengirim ulang Blob yang sama (tanpa capture ulang).
 
-**Definition of Done:**
+**Files yang berubah:**
 
-- Preview muncul, video tersembunyi, tombol berfungsi.
-- Klik "Retake" → kembali ke kamera live, bisa capture lagi.
-- Klik "Continue" → state `CAPTURED`, gambar siap (bisa diakses via `FaceAI.capture.getLastCapture()`).
+- `frontend/js/modules/capture.js`
+- `frontend/js/modules/upload.js` – tambah timeout & error classification
 
-**Test:**
+**Output:**  
+Skenario gagal → pesan jelas, tombol "Retry Upload", bisa mencoba kembali hingga berhasil atau memilih "Retake".
 
-- Lakukan capture, verifikasi preview, klik retake, pastikan kamera kembali normal.
+**Testing:**
 
-**Edge Case:**
+- Simulasikan server mati → klik Continue → pesan error muncul, tombol "Retry Upload".
+- Hidupkan server → klik "Retry" → upload berhasil.
 
-- Pengguna klik "Retake" berkali-kali → tidak ada efek negatif, hanya reset state.
-- Tab tidak aktif saat preview → tidak masalah.
-
-**File yang berubah:**
-
-- `frontend/index.html` – tombol "Retake" dan "Continue" (disembunyikan awalnya)
-- `frontend/css/style.css` – gaya tombol
-- `frontend/js/ui/ui.js` – method `showPreview`, `hidePreview`, `showCaptureButtons`, dll.
-- `frontend/js/modules/capture.js` – logika state dan penyimpanan hasil.
+**Dependency:** Stage 7.3 (progress & feedback) harus selesai.
 
 ---
 
-### Stage 6.5 — Workflow Integration & Edge Cases
+### Stage 7.5 — Backend Logging & Configuration
 
-**Tujuan:**  
-Menggabungkan seluruh alur dari deteksi → quality → ready → countdown → capture → preview → konfirmasi, serta menangani situasi tak terduga.
-
-**Alasan:**  
-Memastikan tidak ada celah yang menyebabkan crash atau freeze.
+**Objective:**  
+Menyempurnakan backend dengan logging, batasan ukuran file, dan konfigurasi yang rapi.
 
 **Deliverables:**
 
-- Alur lengkap terintegrasi di `app.js` atau modul orchestrator kecil.
-- Penanganan: kamera dicabut saat countdown, WebGL context loss, multiple faces muncul saat countdown.
-- State machine diperbarui dengan state baru: `COUNTDOWN`, `CAPTURING`, `CAPTURED`.
+- Logging dengan `logging` module: setiap upload dicatat (nama file, ukuran, timestamp).
+- Konfigurasi batasan ukuran file di `.env` (contoh: `MAX_UPLOAD_SIZE_MB=5`).
+- Struktur response standar menggunakan Pydantic model.
+- Menambahkan handler untuk `RequestValidationError` agar mengembalikan JSON yang jelas.
 
-**Definition of Done:**
+**Files yang berubah:**
 
-- Semua test case berhasil.
-- Tidak ada error console dalam skenario normal dan abnormal.
+- `backend/app/api/upload.py`
+- `backend/app/core/config.py` (atau file `.env` dan pembacaan dengan Pydantic)
+- `backend/app/main.py` – tambah exception handler
+- `backend/requirements.txt` – tambah `python-dotenv` (jika belum)
 
-**Test:**
+**Output:**  
+Di console backend, setiap upload tercatat. Response error menjadi lebih informatif.
 
-- Jalankan alur normal beberapa kali.
-- Cabut kamera saat countdown → kembali ke IDLE.
-- Munculkan dua wajah saat countdown → countdown batal.
-- Tutup tab saat preview → tidak ada memory leak.
+**Testing:**
 
-**Risiko:**
+- Upload file, cek log backend.
+- Kirim file terlalu besar, dapatkan response JSON dengan pesan jelas.
 
-- Kompleksitas state machine meningkat. Kita akan menambah state `COUNTDOWN`, `CAPTURING`, `CAPTURED` di `state.js`. Ini perubahan terstruktur.
-
-**File yang berubah:**
-
-- `frontend/js/core/state.js` – tambah state baru
-- `frontend/js/app.js` – koordinasi alur
-- `frontend/js/modules/capture.js` – integrasi penuh
+**Dependency:** Stage 7.1 (backend endpoint dasar).
 
 ---
 
-## 3. Urutan Pengerjaan yang Direkomendasikan
+## Step 5 — Dependency Check
 
-1. **6.1** – Capture service (fondasi teknis)
-2. **6.2** – Countdown UI & timer (feedback pengguna)
-3. **6.3** – Auto capture trigger (logika inti)
-4. **6.4** – Preview & confirm UI (interaksi pengguna)
-5. **6.5** – Integration & hardening (pemantapan)
+- **Stage 7.1** adalah fondasi; semua stage lain bergantung padanya.
+- **Stage 7.2** membutuhkan 7.1.
+- **Stage 7.3** membutuhkan 7.2.
+- **Stage 7.4** membutuhkan 7.3.
+- **Stage 7.5** bisa dikerjakan kapan saja setelah 7.1, tetapi idealnya setelah 7.4 untuk menyempurnakan backend berdasarkan pengalaman integrasi.
 
-Setiap stage membangun di atas stage sebelumnya secara bertahap.
-
----
-
-## 4. Catatan Tambahan dari Sudut Pandang Pengguna
-
-- **Countdown singkat (3 detik)** cukup untuk pengguna menahan posisi tanpa merasa lama.
-- **Pembatalan countdown harus instan**; pengguna tidak perlu menunggu jika wajah berubah.
-- **Preview harus jelas**, dengan tombol "Retake" dan "Continue" kontras. "Retake" di sebelah kiri (warna netral), "Continue" di kanan (warna hijau) mengikuti kebiasaan UI mobile.
-- **Jika pengguna diam tapi countdown tidak muncul**, berarti salah satu syarat quality belum terpenuhi. Idealnya kita bisa menampilkan penyebabnya, tetapi itu sudah dicakup oleh panel debug. Untuk production nanti, akan ada indikator minimalis.
-- **Tidak ada timeout paksa** setelah preview; pengguna boleh menunda selama yang diinginkan.
+Urutan pengerjaan disarankan: 7.1 → 7.2 → 7.3 → 7.4 → 7.5.
 
 ---
 
-## 5. Kesimpulan
+## Step 6 — Engineering Review
 
-Milestone 6 akan mengubah FaceAI dari sistem deteksi pasif menjadi aplikasi yang bisa menghasilkan foto siap analisis. Dengan membagi menjadi stage kecil, kita menjaga pengembangan tetap terkendali dan setiap komponen dapat diuji secara mandiri. Seluruh desain mengikuti prinsip "Capture then Analyze" yang telah terbukti di keempat repositori acuan.
+- Apakah stage terlalu besar? Tidak, setiap stage hanya menambah satu kemampuan (API, integrasi frontend, feedback, error handling, logging).
+- Over‑engineering? Tidak ada; semua dibutuhkan untuk fondasi yang kokoh menuju milestone berikutnya (preprocessing, AI analysis).
+- Apakah frontend tetap ringan? Ya, hanya menambah modul upload sederhana.
+- Apakah backend menjadi pusat AI? Ya, mulai dari menerima gambar hingga nanti preprocessing dan inferensi.
+- Apakah struktur mudah dikembangkan hingga v1.0? Sangat; pipeline backend sudah mengikuti pola DeepFace (detect → align → …), hanya saja dimulai dari menerima gambar.
+- Pelajaran dari repositori: Semua repositori menekankan konsistensi preprocessing; dengan backend yang menerima gambar utuh, kita bisa memastikan preprocessing berjalan seragam.
 
-Saya menunggu persetujuan Anda untuk memulai implementasi Stage 6.1.
+**Kesimpulan:** Milestone 7 dirancang dengan baik. Stage‑stage di atas akan membangun integrasi frontend‑backend yang andal, modular, dan siap menopang seluruh pipeline AI FaceAI.

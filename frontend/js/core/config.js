@@ -68,4 +68,7 @@ FaceAI.config = {
   MOUTH_PATCH_SIZE: 20,
   EYE_VARIANCE_THRESHOLD: 25, // varians minimum agar dianggap terlihat
   MOUTH_VARIANCE_THRESHOLD: 25,
+
+  // Backend Upload (Stage 7.2)
+  BACKEND_UPLOAD_URL: "http://localhost:8000/api/upload",
 };
