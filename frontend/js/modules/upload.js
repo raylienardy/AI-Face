@@ -1,12 +1,15 @@
 /**
  * FaceAI Upload Module
- * Version: 0.1 – Milestone 7 Stage 7.2
+ * Version: 0.1 – Milestone 7 Stage 7.4
  *
  * Sends the captured canvas to the backend via HTTP multipart upload.
+ * Includes timeout and error classification.
  */
 "use strict";
 
 FaceAI.upload = (function () {
+  const UPLOAD_TIMEOUT_MS = 15000; // 15 detik
+
   return {
     /**
      * Upload a canvas as JPEG to the backend.
@@ -34,14 +37,20 @@ FaceAI.upload = (function () {
 
       const url = FaceAI.config.BACKEND_UPLOAD_URL;
 
+      // AbortController for timeout
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), UPLOAD_TIMEOUT_MS);
+
       try {
         const response = await fetch(url, {
           method: "POST",
           body: formData,
+          signal: controller.signal,
         });
+        clearTimeout(timeoutId);
 
         if (!response.ok) {
-          let detail = `Server error: ${response.status}`;
+          let detail = `Server error (${response.status})`;
           try {
             const errData = await response.json();
             detail = errData.detail || detail;
@@ -53,11 +62,15 @@ FaceAI.upload = (function () {
 
         return await response.json();
       } catch (error) {
-        // Network errors (TypeError) are common
+        clearTimeout(timeoutId);
+        if (error.name === "AbortError") {
+          throw new Error("Upload timed out. Please check your connection.");
+        }
         if (error instanceof TypeError) {
           throw new Error("Network error. Please check your connection.");
         }
-        throw error; // rethrow other errors
+        // Re-throw other errors (server, validation)
+        throw error;
       }
     },
   };
