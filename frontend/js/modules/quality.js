@@ -1,13 +1,18 @@
 /**
  * FaceAI Quality Assessment Module
- * Version: 0.1 – Milestone 5 Stage 5.7 (fixed state)
+ * Version: 0.2 – Milestone 5 Stage 5.7 (performance fix)
  */
 "use strict";
 
 FaceAI.quality = (function () {
+  // Offscreen canvas
   let _sampleCanvas = null;
   function getSampleCanvas() {
-    if (!_sampleCanvas) _sampleCanvas = document.createElement("canvas");
+    if (!_sampleCanvas) {
+      _sampleCanvas = document.createElement("canvas");
+      // Atribut untuk menghindari peringatan "will read frequently"
+      const ctx = _sampleCanvas.getContext("2d", { willReadFrequently: true });
+    }
     return _sampleCanvas;
   }
 
@@ -24,10 +29,21 @@ FaceAI.quality = (function () {
   let _readyCounter = 0;
   const READY_DEBOUNCE_FRAMES = 15;
 
+  // Throttle: proses hanya setiap N frame untuk menghemat CPU
+  let _frameCount = 0;
+  const PROCESS_EVERY_N_FRAMES = 3; // proses setiap 3 frame (~10x/detik pada 30fps)
+
   function init() {
     FaceAI.ui.showQualityDebug(true);
 
     FaceAI.detection.onFaceData((faceData) => {
+      _frameCount++;
+      if (_frameCount % PROCESS_EVERY_N_FRAMES !== 0) {
+        // Tetap update laporan debug tanpa perhitungan berat jika ada perubahan?
+        // Untuk menjaga UI tetap responsif, kita tetap jalankan checker tapi dengan throttle.
+        return; // skip frame ini untuk menghemat CPU
+      }
+
       if (faceData) {
         const config = FaceAI.config;
         const videoEl = FaceAI.ui.getVideoElement();
@@ -48,7 +64,6 @@ FaceAI.quality = (function () {
           faceData.bbox,
         );
 
-        // Agregasi
         const allChecksPassed =
           position.centered &&
           size.good &&
@@ -70,11 +85,19 @@ FaceAI.quality = (function () {
           FaceAI.state.set("FACE_READY");
           FaceAI.ui.showReadyIndicator(true);
         } else {
-          FaceAI.state.set("FACE_FOUND");
+          // Hanya set ke FACE_FOUND jika state saat ini bukan FACE_READY atau lebih tinggi
+          const currentState = FaceAI.state.get();
+          if (
+            currentState !== "FACE_READY" &&
+            currentState !== "CAPTURING" &&
+            currentState !== "CAPTURED"
+          ) {
+            FaceAI.state.set("FACE_FOUND");
+          }
           FaceAI.ui.showReadyIndicator(false);
         }
 
-        // Debug report
+        // Laporan debug
         const fmt = (val, dec = 1) =>
           typeof val === "number" ? val.toFixed(dec) : String(val);
         const yesno = (b) => (b ? "true" : "false");
@@ -129,10 +152,10 @@ READY     : ${isReady ? "✅ YES" : "❌ NO"} (counter: ${_readyCounter}/${READY
         FaceAI.ui.updateQualityDebug("NO FACE DETECTED");
       }
     });
-    console.log("Quality module initialized (Stage 5.7, fixed)");
+    console.log("Quality module initialized (Stage 5.7, optimized)");
   }
 
-  // --- Checker functions (sama seperti sebelumnya) ---
+  // --- Checker functions ---
   function checkPosition(bbox, vw, vh) {
     if (!vw || !vh) return { centered: false, tooHigh: false, tooLow: false };
     const tol = FaceAI.config.CENTER_TOLERANCE;
