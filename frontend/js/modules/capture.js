@@ -1,25 +1,16 @@
 /**
  * FaceAI Capture Module
  * Version: 0.1 – Milestone 6 Stage 6.2
- *
- * - takeSnapshot(video) → canvas
- * - State‑driven countdown (listens for FACE_READY)
  */
 "use strict";
 
 FaceAI.capture = (function () {
-  // ==========================================
-  // Private State
-  // ==========================================
-  let countdownTimer = null; // setTimeout handle
-  let currentCount = 0; // detik tersisa
-  let isCountingDown = false; // flag
-  let stateWatchInterval = null; // interval untuk polling state
+  let countdownTimer = null;
+  let currentCount = 0;
+  let isCountingDown = false;
+  let stateWatchInterval = null;
   const COUNTDOWN_SECONDS = 3;
 
-  // ==========================================
-  // Countdown Logic (private)
-  // ==========================================
   function startCountdown() {
     if (isCountingDown) return;
     isCountingDown = true;
@@ -40,7 +31,6 @@ FaceAI.capture = (function () {
 
   function showCurrentCount() {
     if (!isCountingDown) return;
-
     if (currentCount > 0) {
       FaceAI.ui.showCountdown(String(currentCount));
       countdownTimer = setTimeout(() => {
@@ -48,7 +38,6 @@ FaceAI.capture = (function () {
         if (currentCount > 0) {
           showCurrentCount();
         } else {
-          // Countdown selesai – trigger capture (Stage 6.3)
           finishCountdown();
         }
       }, 1000);
@@ -58,14 +47,10 @@ FaceAI.capture = (function () {
   function finishCountdown() {
     isCountingDown = false;
     FaceAI.ui.hideCountdown();
-    // Placeholder untuk Stage 6.3 – capture akan dipanggil di sini
     console.log("Countdown finished – ready to capture");
     // TODO Stage 6.3: FaceAI.capture.takeSnapshot(...)
   }
 
-  // ==========================================
-  // State Monitoring
-  // ==========================================
   function checkState() {
     const state = FaceAI.state.get();
     if (state === "FACE_READY") {
@@ -79,23 +64,13 @@ FaceAI.capture = (function () {
     }
   }
 
-  // ==========================================
-  // Public API
-  // ==========================================
   return {
-    /**
-     * Mulai memantau state machine untuk auto‑countdown.
-     * Dipanggil sekali setelah kamera & deteksi aktif.
-     */
     init() {
-      if (stateWatchInterval) return; // sudah berjalan
+      if (stateWatchInterval) return;
       stateWatchInterval = setInterval(checkState, 200);
       console.log("Capture module initialized (state watcher active)");
     },
 
-    /**
-     * Hentikan pemantauan (untuk cleanup).
-     */
     destroy() {
       if (stateWatchInterval) {
         clearInterval(stateWatchInterval);
@@ -104,11 +79,6 @@ FaceAI.capture = (function () {
       cancelCountdown("module destroyed");
     },
 
-    /**
-     * Capture a still frame from the video element (Stage 6.1).
-     * @param {HTMLVideoElement} video
-     * @returns {HTMLCanvasElement|null}
-     */
     takeSnapshot(video) {
       if (!video) {
         console.warn("FaceAI.capture: no video element");
@@ -133,11 +103,6 @@ FaceAI.capture = (function () {
       }
     },
 
-    /**
-     * Convert a canvas to a Data URL (PNG).
-     * @param {HTMLCanvasElement} canvas
-     * @returns {string|null}
-     */
     toDataURL(canvas) {
       if (!canvas) return null;
       try {

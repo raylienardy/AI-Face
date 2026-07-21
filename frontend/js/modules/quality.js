@@ -1,22 +1,16 @@
 /**
  * FaceAI Quality Assessment Module
- * Version: 0.1 – Milestone 5 Stage 5.7 (Aggregator & Ready Indicator)
+ * Version: 0.1 – Milestone 5 Stage 5.7 (fixed state)
  */
 "use strict";
 
 FaceAI.quality = (function () {
-  // ==========================================
-  // Private – Offscreen canvas
-  // ==========================================
   let _sampleCanvas = null;
   function getSampleCanvas() {
     if (!_sampleCanvas) _sampleCanvas = document.createElement("canvas");
     return _sampleCanvas;
   }
 
-  // ==========================================
-  // Private – Stability buffer
-  // ==========================================
   let _centerBuffer = [];
   function addCenter(x, y) {
     _centerBuffer.push({ x, y });
@@ -27,17 +21,11 @@ FaceAI.quality = (function () {
     _centerBuffer = [];
   }
 
-  // ==========================================
-  // Private – Ready debounce
-  // ==========================================
   let _readyCounter = 0;
-  const READY_DEBOUNCE_FRAMES = 15; // ~0.5 detik pada 30fps
+  const READY_DEBOUNCE_FRAMES = 15;
 
-  // ==========================================
-  // Public API
-  // ==========================================
   function init() {
-    FaceAI.ui.showQualityDebug(true); // tetap tampil untuk dev
+    FaceAI.ui.showQualityDebug(true);
 
     FaceAI.detection.onFaceData((faceData) => {
       if (faceData) {
@@ -46,7 +34,6 @@ FaceAI.quality = (function () {
         const vw = videoEl.videoWidth;
         const vh = videoEl.videoHeight;
 
-        // Jalankan semua checker
         const position = checkPosition(faceData.bbox, vw, vh);
         const size = checkSize(faceData.bbox, vh);
         const lighting = checkLighting(videoEl, faceData.bbox);
@@ -61,7 +48,7 @@ FaceAI.quality = (function () {
           faceData.bbox,
         );
 
-        // Agregasi: semua syarat harus terpenuhi
+        // Agregasi
         const allChecksPassed =
           position.centered &&
           size.good &&
@@ -69,9 +56,8 @@ FaceAI.quality = (function () {
           blur.sharp &&
           stability.stable &&
           visibility.allVisible &&
-          !FaceAI.detection.hasMultipleFaces(); // multiple faces tidak diizinkan
+          !FaceAI.detection.hasMultipleFaces();
 
-        // Debounce: hanya transition jika stabil beberapa frame
         if (allChecksPassed) {
           _readyCounter++;
         } else {
@@ -80,7 +66,6 @@ FaceAI.quality = (function () {
 
         const isReady = _readyCounter >= READY_DEBOUNCE_FRAMES;
 
-        // State machine
         if (isReady) {
           FaceAI.state.set("FACE_READY");
           FaceAI.ui.showReadyIndicator(true);
@@ -89,7 +74,7 @@ FaceAI.quality = (function () {
           FaceAI.ui.showReadyIndicator(false);
         }
 
-        // Tampilkan laporan debug (tetap untuk monitoring)
+        // Debug report
         const fmt = (val, dec = 1) =>
           typeof val === "number" ? val.toFixed(dec) : String(val);
         const yesno = (b) => (b ? "true" : "false");
@@ -144,12 +129,10 @@ READY     : ${isReady ? "✅ YES" : "❌ NO"} (counter: ${_readyCounter}/${READY
         FaceAI.ui.updateQualityDebug("NO FACE DETECTED");
       }
     });
-    console.log("Quality module initialized (Stage 5.7)");
+    console.log("Quality module initialized (Stage 5.7, fixed)");
   }
 
-  // ----------------------------------------------------------------
-  //  CHECKERS (sama seperti sebelumnya)
-  // ----------------------------------------------------------------
+  // --- Checker functions (sama seperti sebelumnya) ---
   function checkPosition(bbox, vw, vh) {
     if (!vw || !vh) return { centered: false, tooHigh: false, tooLow: false };
     const tol = FaceAI.config.CENTER_TOLERANCE;
