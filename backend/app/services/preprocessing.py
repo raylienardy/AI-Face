@@ -1,5 +1,6 @@
 import logging
 import cv2
+import numpy as np
 from pathlib import Path
 from app.services.detector import detector
 from app.services.validator import validate_faces
