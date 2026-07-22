@@ -3,6 +3,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware          # ← TAMBAHKAN IMPORT INI
 from app.database import init_db
+from app.api import upload, preprocessing, analysis, report, history
 
 from app.api import upload, preprocessing, analysis, report
 
@@ -25,6 +26,7 @@ app.include_router(upload.router)
 app.include_router(preprocessing.router)
 app.include_router(analysis.router)
 app.include_router(report.router)
+app.include_router(history.router)
 
 # Exception handler (sudah ada)
 @app.exception_handler(RequestValidationError)
