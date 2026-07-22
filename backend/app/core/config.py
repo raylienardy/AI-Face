@@ -11,3 +11,8 @@ ALLOWED_EXTENSIONS = {".jpg", ".jpeg", ".png"}
 # Detection (Stage 8.1)
 DETECTION_MODEL_NAME = "buffalo_l"   # model bawaan InsightFace (deteksi + landmark)
 DETECTION_CONFIDENCE_THRESHOLD = 0.5
+
+# Preprocessing pipeline (Stage 8.5)
+PREPROCESS_TARGET_SIZE = (224, 224)       # width, height
+PREPROCESS_NORMALIZATION_MODE = "base"    # "base", "vggface", "facenet"
+PREPROCESS_OUTPUT_DIR = "processed"
