@@ -1,8 +1,8 @@
-# Dokumen Desain Teknis Milestone 11 — History & Dataset
+# Dokumen Desain Teknis Milestone 12 — UI & Performance
 
 **Versi:** 1.0  
 **Status:** Draft untuk persetujuan Founder  
-**Peran:** Senior AI Engineer & Software Architect
+**Peran:** Senior AI Engineer, Software Architect & Frontend Engineer
 
 ---
 
@@ -10,357 +10,452 @@
 
 ### Facial Beauty Prediction
 
-- **Dataset disusun terpisah dari kode:** Gambar mentah dan file label (Excel/CSV) berada di folder terpisah. Ini memudahkan audit.
-- **Hasil eksperimen dicatat:** Metrik evaluasi disimpan, bukan hanya skor akhir. Untuk FaceAI, kita perlu menyimpan seluruh laporan, bukan hanya skor overall.
-- **Metadata penelitian dipisahkan:** Informasi tentang model, preprocessing, dan split data disimpan. FaceAI harus menyimpan versi model AI dan versi preprocessing yang digunakan.
+- **Pipeline inference dijalankan pada gambar statis**, bukan real‑time. Waktu inferensi bisa memakan beberapa detik; pengguna perlu diberi indikator progres yang jelas.
+- **Hasil ditampilkan sebagai skor numerik** tanpa visualisasi yang rumit. Insight: UI FaceAI harus menyajikan laporan dengan hierarki yang jelas—skor utama menonjol, detail dapat diakses dengan scroll.
 
-### face-rating
+### face‑rating
 
-- **Fitur geometris dapat ditelusuri:** Setiap rasio dan landmark disimpan secara eksplisit. Laporan FaceAI sudah memuat skor per region, sehingga history dapat menyimpan laporan lengkap.
-- **Hasil prediksi disimpan terstruktur:** CSV dengan kolom untuk setiap fitur. FaceAI bisa menyimpan laporan JSON di database sebagai teks.
+- **Setiap fitur wajah diberi skor terpisah**, lalu ditampilkan dalam bentuk tabel sederhana. Tidak ada animasi berlebihan. Insight: tampilan skor per‑kategori yang kita miliki sudah mirip; kita hanya perlu meningkatkan keterbacaan dengan typography yang lebih baik dan spasi yang cukup.
 
 ### MEBeauty
 
-- **Konsistensi preprocessing penting:** Metadata preprocessing (model align, ukuran resize) dicatat untuk reproduksibilitas. FaceAI harus menyimpan informasi preprocessing pipeline version.
-- **Embedding sebagai representasi antara:** Embedding disimpan terpisah dari gambar. Untuk FaceAI, embedding belum digunakan, tetapi desain harus memungkinkan penyimpanan embedding di masa depan jika diperlukan.
-- **Struktur dataset multi-etnis:** Tidak relevan langsung, tetapi menunjukkan pentingnya menyimpan informasi identitas (jika ada) secara anonim.
+- **Preprocessing pipeline (crop, align, normalization) adalah bagian paling berat.** Pengguna tidak melihat proses ini, tetapi latensi total bisa mencapai beberapa detik. Insight: frontend harus menampilkan indikator “Analyzing…” yang jelas setelah upload, dan backend harus memberikan response secepat mungkin dengan mengoptimalkan pipeline.
+- **Bug normalisasi** menunjukkan bahwa konsistensi antar‑tahap harus dijaga, tetapi tidak berdampak langsung pada UI.
 
 ### DeepFace
 
-- **Embedding cache:** DeepFace menyimpan embedding ke file pickle untuk pencarian cepat. FaceAI dapat mengadopsi penyimpanan hasil analisis sebagai JSON di database, yang berfungsi sebagai cache.
-- **Representasi hasil terstruktur:** Setiap fungsi (verify, analyze) mengembalikan dictionary. History dapat menyimpan dictionary tersebut.
-- **Modularitas pipeline:** Setiap tahap berdiri sendiri. History tidak boleh mencampuradukkan preprocessing, analysis, dan report; ia hanya mencatat input dan output.
+- **Pemisahan tegas antara detection, alignment, normalization, representation, dan analysis.** Setiap tahap bisa berjalan independen. Insight: UI tidak perlu memblokir seluruh aplikasi saat satu tahap berjalan. Misalnya, setelah capture, kita bisa langsung menampilkan preview sementara backend bekerja.
+- **Confidence dan threshold** ditampilkan sebagai metrik tambahan. Insight: laporan kita sudah mencantumkan confidence; pastikan font dan warnanya mudah dibaca.
 
 ---
 
-## Langkah 2 — Evaluasi Milestone 11
+## Langkah 2 — Evaluasi Milestone 12
 
-### 1. Apakah objective sudah tepat?
+### 1. Objective sudah tepat
 
-**Ya.** Menyimpan seluruh hasil analisa adalah kebutuhan dasar. Tanpa history, FaceAI hanyalah alat sekali pakai.
+Meningkatkan pengalaman pengguna setelah semua fitur selesai adalah pendekatan yang benar. Fokus pada UI dan performa tanpa menambah fitur baru.
 
-### 2. Apakah deliverables sudah lengkap?
+### 2. UI improvements sudah cukup?
 
-**Hampir.** "Save Report" dan "Save Image" sudah benar. "History", "Search", "Delete", "Export" mencakup operasi CRUD. Namun ada beberapa tambahan yang perlu dipertimbangkan:
+- **Responsive**: wajib, karena pengguna bisa membuka dari berbagai perangkat.
+- **Better Typography**: perlu; saat ini teks laporan masih default.
+- **Better Animation**: animasi mikro untuk transisi (misal countdown, fade in/out) akan membuat aplikasi terasa lebih halus. Tidak perlu berlebihan.
+- **Better Loading**: indikator saat upload dan analisis masih minimal; perlu ditingkatkan.
+- **Better Empty State**: belum ada pesan ketika tidak ada history atau hasil.
+- **Better Error Message**: sudah ada, tetapi bisa dibuat lebih terstruktur dan ramah pengguna.
 
-- **Metadata analisis:** timestamp, versi model, versi preprocessing, durasi analisis (opsional).
-- **Thumbnail:** Tidak wajib, tetapi berguna untuk tampilan depan. Bisa ditambahkan sebagai perbaikan di M12.
-- **Backup/restore:** Tidak perlu di MVP.
-- **Keterkaitan dengan pengguna:** Untuk saat ini single-user, jadi tidak perlu user ID. Namun desain harus siap menambahkan kolom user_id di masa depan.
+### 3. Performance improvements sudah cukup?
 
-Saya rekomendasikan menambahkan **versi model/preprocessing** ke metadata agar hasil dapat direproduksi.
+- **Lazy Loading**: tidak kritis untuk ukuran kode kita saat ini, tetapi untuk model AI di backend bisa di‑warm‑up.
+- **Camera Optimization**: resolusi bisa disesuaikan, stream dihentikan saat tidak digunakan.
+- **Detection Optimization**: throttle FPS sudah ada, bisa diturunkan ke 15–20 FPS.
+- **Memory Optimization**: membersihkan canvas dan stream secara eksplisit.
+- **Cache**: backend embedding (jika dipakai) bisa di‑cache; frontend bisa cache hasil history untuk mengurangi fetch.
 
-### 3. Apakah ada komponen penting yang hilang?
+### 4. Tidak ada bagian yang hilang, tetapi…
 
-- **Versi model/preprocessing** seperti di atas.
-- **Kemampuan untuk menyimpan hasil preprocessing (aligned face)?** Tidak wajib; dapat direproduksi dari gambar asli. Tapi untuk thumbnail, bisa disimpan gambar resize kecil.
-- **Integrasi otomatis dengan pipeline:** Setelah laporan dihasilkan, harus otomatis tersimpan ke history tanpa intervensi pengguna.
+Satu area yang mungkin kurang adalah **aksesibilitas** (contrast, label aria). Itu bisa menjadi perbaikan kecil di tahap ini.
 
-### 4. Apakah ada bagian yang sebaiknya dipindahkan ke milestone lain?
+### 5. Tidak ada yang perlu dipindahkan ke milestone lain.
 
-"Search" yang kompleks (full-text search, filter berdasarkan skor) bisa ditingkatkan di M12. Untuk M11, cukup sederhana: daftar semua riwayat, filter dasar (tanggal), dan delete. "Export" bisa berupa unduh JSON laporan.
+Semua yang tercantum adalah penyempurnaan yang tepat setelah fitur lengkap.
 
-### 5. Apakah urutannya sudah benar?
+### 6. Urutan pekerjaan sudah benar.
 
-Ya, setelah Report Generator (M10). Tidak ada ketergantungan dengan milestone lain.
+Optimasi performa bisa dilakukan paralel dengan UI, tetapi sebaiknya UI dasar diperbaiki terlebih dahulu agar pengujian lebih mudah.
 
-### 6. Apakah sesuai dengan pembelajaran dari keempat repository?
+### 7. Sesuai dengan pembelajaran?
 
-**Ya.** Kita mengadopsi pemisahan gambar dan metadata (Facial Beauty Prediction), penyimpanan hasil terstruktur (face-rating, DeepFace), pencatatan versi preprocessing (MEBeauty), dan modularitas (DeepFace).
-
----
-
-## Langkah 3 — Filosofi Penyimpanan Data FaceAI
-
-- **Wajib disimpan:**
-  - Gambar asli (hasil capture).
-  - Laporan lengkap (JSON sesuai skema Report dari M10).
-  - Metadata analisis: ID unik, timestamp, versi model AI (misal "buffalo_l v1.0"), versi preprocessing pipeline (misal "v1.0"), overall score, confidence.
-  - Status analisis (sukses/gagal).
-
-- **Tidak perlu disimpan:**
-  - Hasil preprocessing (aligned face) – dapat direproduksi dari gambar asli dengan preprocessing pipeline yang sama.
-  - Embedding (saat ini tidak digunakan untuk analisis kecantikan, tapi arsitektur harus siap menambahkannya nanti).
-
-- **Boleh dihitung ulang:** Semua skor dapat direproduksi dengan menjalankan ulang pipeline pada gambar asli, asalkan versi model dan preprocessing sama. Oleh karena itu, **gambar asli tidak boleh dihapus** kecuali seluruh analisis dihapus.
-
-- **Bersifat immutable:** Setelah analisis selesai, record tidak boleh diubah. Jika user ingin analisis ulang, dibuat record baru.
-
-- **Hubungan antar entitas:**
-  - 1 analisis → 1 gambar asli + 1 laporan.
-  - Tidak ada hubungan antar analisis (independen).
-  - Jika user mengunggah gambar yang sama dua kali, akan menghasilkan dua record berbeda dengan ID berbeda.
-
-- **Efisiensi:** Gunakan database SQLite untuk metadata, sedangkan gambar tetap disimpan di folder `uploads/` (atau folder khusus `history/`). Laporan disimpan sebagai teks JSON di database, bukan file terpisah, untuk kemudahan query dan backup.
+Ya. Pendekatan bertahap tanpa mengubah logika bisnis selaras dengan filosofi DeepFace yang modular. Peningkatan UI dan performa dilakukan setelah fitur stabil, seperti yang terlihat di MEBeauty yang lebih fokus pada pipeline daripada UI.
 
 ---
 
-## Langkah 4 — Desain Arsitektur History & Dataset
+## Langkah 3 — Filosofi UI FaceAI
 
-### Struktur Folder
+Filosofi yang diinginkan sudah tepat. Saya tambahkan satu poin:
 
-```
-FaceAI/
-  backend/
-    uploads/                  ← gambar hasil upload (tetap)
-    history/                  ← folder baru untuk penyimpanan permanen
-      <analysis_id>/
-        original.jpg          ← salinan gambar asli (opsional, bisa tetap di uploads)
-        thumbnail.jpg         ← (opsional, untuk M12)
-        report.json           ← (opsional, cadangan jika database corrupt)
-```
+- **Dark theme sebagai default** — sudah diterapkan, profesional, nyaman di mata.
+- **Hirarki visual yang jelas** — overall score paling menonjol, kemudian kategori utama, lalu detail.
+- **Konsistensi dengan state machine** — UI selalu mencerminkan state saat ini (idle, detecting, ready, capturing, result) tanpa membingungkan.
+- **Minimalis namun informatif** — tidak ada elemen dekoratif yang tidak perlu.
 
-Untuk kemudahan, kita akan tetap menyimpan gambar asli di `uploads/` dan **tidak menghapusnya** setelah analisis. Database akan menyimpan path relatif ke file tersebut.
-
-### Skema Database SQLite
-
-Tabel `analyses`:
-
-- `id` : TEXT PRIMARY KEY (UUID)
-- `timestamp` : TEXT (ISO 8601)
-- `image_path` : TEXT (path relatif ke gambar asli)
-- `report_json` : TEXT (JSON lengkap sesuai Report schema)
-- `overall_score` : REAL
-- `confidence` : REAL
-- `model_version` : TEXT (misal "insightface-buffalo_l-v1")
-- `preprocessing_version` : TEXT (misal "align-eyes-letterbox-224")
-- `strengths` : TEXT (JSON array)
-- `suggestions` : TEXT (JSON array)
-- `status` : TEXT ('completed', 'failed', dll)
-
-Index: `timestamp` untuk pengurutan.
-
-### Struktur Report JSON
-
-Sesuai `Report` Pydantic dari M10. Disimpan sebagai string.
-
-### Alur Penyimpanan
-
-1. Endpoint `/api/analyze` (atau `/api/report`) menghasilkan `Report`.
-2. Setelah report dibuat, **sebelum** mengembalikan response, panggil service `history_service.save_analysis()`.
-3. `save_analysis` melakukan:
-   - Generate UUID.
-   - Copy gambar asli dari temp path ke `uploads/` (jika belum ada) → dapatkan `image_path`.
-   - Simpan record ke database.
-   - Kembalikan `analysis_id`.
-4. Response report diperkaya dengan `analysis_id`.
-
-Endpoint `/api/upload` hanya menyimpan gambar; belum ada history. Maka kita integrasikan penyimpanan history di endpoint `/api/analyze` (atau `/api/report`) karena di sana laporan sudah jadi.
-
-Untuk `export`, kita bisa buat endpoint `/api/history/{id}/export` yang mengembalikan file JSON laporan sebagai unduhan.
+Tidak ada yang perlu diubah.
 
 ---
 
-## Langkah 5 — Pemecahan Menjadi Stage Kecil
+## Langkah 4 — Evaluasi Performa Seluruh Pipeline
 
-### Stage 11.1 — Database Setup & Model
+| Tahap                 | Potensi Bottleneck                                                                 | CPU                                          | RAM                       | Jaringan                        | Latency (perkiraan)                           | UX Impact                                        |
+| --------------------- | ---------------------------------------------------------------------------------- | -------------------------------------------- | ------------------------- | ------------------------------- | --------------------------------------------- | ------------------------------------------------ |
+| Camera                | Resolusi tinggi, format tidak terkompresi                                          | Rendah                                       | Rendah                    | -                               | 100–500 ms startup                            | Pengguna menunggu kamera siap                    |
+| Face Detection        | MediaPipe inferensi setiap frame (CPU)                                             | Sedang (10‑15% per core)                     | ~50 MB                    | -                               | < 50 ms per frame                             | Tidak terasa jika FPS cukup                      |
+| Quality Assessment    | Pengecekan blur (Laplacian), lighting sampling                                     | Rendah‑sedang (tergantung ukuran bbox)       | Rendah                    | -                               | < 10 ms per check (setiap 3 frame)            | Tidak terasa                                     |
+| Auto Capture          | `takeSnapshot` (drawImage)                                                         | Rendah                                       | Rendah                    | -                               | < 10 ms                                       | Instan                                           |
+| Upload                | Ukuran gambar (1280×720 JPEG ~100‑200 KB)                                          | Rendah                                       | Rendah                    | ~1‑2 detik (tergantung koneksi) | Perlu indikator “Uploading…”                  |
+| Backend Preprocessing | InsightFace model load (sekali), detection+landmark (CPU), alignment (CPU), resize | Sedang (detection ~100 ms, alignment ~20 ms) | ~500 MB untuk semua model | -                               | 1–3 detik (pertama kali, model sudah di‑load) | Backend bisa memberikan response dalam 2‑4 detik |
+| AI Analysis           | Placeholder (dummy random) → ringan                                                | Sangat rendah                                | Rendah                    | -                               | < 10 ms                                       | Instan                                           |
+| Report Generator      | Pembacaan YAML, string formatting                                                  | Rendah                                       | Rendah                    | -                               | < 5 ms                                        | Instan                                           |
+| History               | SQLite query                                                                       | Rendah                                       | Rendah                    | -                               | < 10 ms                                       | Instan                                           |
 
-**Objective:**  
-Menyiapkan database SQLite, tabel `analyses`, dan model data menggunakan Python (sqlite3).
+**Kesimpulan:** Bottleneck utama adalah **upload jaringan** dan **backend preprocessing (deteksi+alignment)**. Frontend detection dan quality sudah ringan. Fokus optimasi di backend dan feedback UI selama menunggu.
 
-**Mengapa diperlukan:**  
-Pondasi penyimpanan metadata. Tanpa ini, stage lain tidak bisa berjalan.
+---
 
-**Input:**  
-Tidak ada.
+## Langkah 5 — Rancang Strategi Optimasi
+
+### Frontend
+
+- **Lazy Loading**: tidak diperlukan karena semua script sudah kecil. Pertahankan.
+- **Asset Loading**: model MediaPipe di‑cache oleh browser. Tambahkan `crossorigin` dan pastikan CDN mendukung caching.
+- **Script Loading**: sudah menggunakan urutan yang benar, tanpa `defer`/`async` yang bisa merusak dependensi. Biarkan.
+- **CSS**: kompresi? Tidak perlu untuk development. Gunakan variabel yang sudah ada.
+- **Image Loading**: thumbnail untuk history? Belum ada, tidak perlu sekarang.
+- **Font Loading**: gunakan font sistem (`system-ui`) yang sudah diterapkan—tanpa unduhan tambahan.
+
+### Camera
+
+- **Startup**: minta resolusi ideal (`ideal: 1280x720`) bukan rentang. Kurangi `ideal` ke `640x480` jika performa rendah? Untuk laptop modern 720p sudah ringan.
+- **Stream management**: sudah ada `stop()` di `camera.js` dan saat tab hidden. Pertahankan.
+- **Restart**: pastikan `stop()` dipanggil sebelum `start()` baru agar tidak ada stream ganda.
+
+### Face Detection
+
+- **Detection interval**: turunkan `FPS_LIMIT` dari 30 ke 20 (cukup untuk bounding box mulus). Ubah di `config.js`.
+- **Bounding box rendering**: sudah optimal menggunakan `requestAnimationFrame` dan canvas terpisah.
+- **Canvas optimization**: gunakan `willReadFrequently: true` hanya untuk canvas quality (sudah dilakukan). Untuk drawing, tidak perlu.
+
+### Backend
+
+- **Upload optimization**: frontend bisa mengompres gambar menjadi JPEG kualitas 0.8 sebelum upload? Itu akan memperkecil ukuran tanpa kehilangan detail signifikan. Implementasikan di `upload.js` saat konversi canvas ke blob (ubah kualitas menjadi 0.8).
+- **Image compression**: backend tidak perlu kompres ulang.
+- **Request optimization**: backend sudah menerima multipart, tidak perlu diubah.
+- **Queue**: tidak diperlukan untuk beban rendah.
+- **Response size**: laporan JSON bisa mencapai beberapa KB. Gunakan kompresi GZip di FastAPI? Sudah otomatis untuk response besar. Aman.
+
+### AI (Backend)
+
+- **Model loading**: InsightFace sudah singleton, hanya di‑load sekali. Tidak ada masalah.
+- **Warm‑up**: lakukan dummy inference saat startup untuk mengurangi latensi permintaan pertama. Dapat dilakukan di `startup_event` FastAPI.
+- **Caching**: embedding belum digunakan, tetapi jika nanti dipakai, embedding bisa di‑cache per gambar.
+- **Inference optimization**: sudah menggunakan onnxruntime dengan CPU execution provider. Tidak bisa dioptimalkan lebih jauh tanpa GPU.
+
+### Memory
+
+- **Object cleanup**: panggil `URL.revokeObjectURL()` setelah preview (jika pakai object URL). Saat ini kita pakai canvas dan data URL, tidak ada object URL yang perlu dibersihkan.
+- **Canvas cleanup**: `drawing.clear()` sudah ada. Pastikan `clearFaceBox` dipanggil sebelum menggambar ulang.
+- **Video cleanup**: `camera.stop()` menghentikan track. Sudah benar.
+- **Cache strategy**: history service bisa menyimpan hasil query di memori untuk waktu singkat (tidak perlu).
+
+### UI
+
+- **Loading animation**: spinner CSS sederhana saat upload (tombol berubah jadi spinner). Saat analisis, kita bisa menampilkan “Analyzing…” di area laporan sebelum data muncul.
+- **Skeleton**: tidak perlu.
+- **Empty state**: untuk history kosong, tampilkan pesan “No analyses yet”.
+- **Error handling**: ganti `alert` dengan elemen error di UI yang lebih halus.
+- **Success feedback**: setelah laporan muncul, animasi fade‑in.
+- **Progress indicator**: untuk upload, kita bisa gunakan `XMLHttpRequest` dengan event `progress` untuk menampilkan persentase, tetapi untuk kesederhanaan, spinner sudah cukup.
+
+---
+
+## Langkah 6 — Pemecahan Menjadi Stage Kecil
+
+### Stage 12.1 — Typography & Responsive Layout
+
+**Objective:** Meningkatkan keterbacaan teks dan memastikan tampilan optimal di berbagai ukuran layar.
+
+**Mengapa diperlukan:** Saat ini teks laporan masih mentah; tata letak belum diuji pada layar kecil.
+
+**Input:** Tidak ada.
 
 **Process:**
 
-- Buat modul `backend/app/database.py` dengan fungsi `init_db()`.
-- Buat file `backend/app/services/history_service.py` dengan class `HistoryService` yang menangani operasi CRUD.
-- Tentukan versi skema awal.
+- Definisikan ukuran font responsif menggunakan unit `rem` atau `clamp()`.
+- Atur `max-width` container utama menjadi 800px, tengah.
+- Pada laporan, gunakan grid 2‑kolom untuk kategori.
+- Uji dengan Chrome DevTools device toolbar.
 
-**Output:**  
-Database siap digunakan; tabel `analyses` terbuat.
+**Output:** Tampilan lebih rapi, tidak pecah di layar 1366×768 hingga 1920×1080.
 
 **Deliverables:**
 
-- `backend/app/database.py`
-- `backend/app/services/history_service.py` (kerangka)
-- Folder `backend/history/` (opsional, jika mau simpan cadangan)
+- Modifikasi `frontend/css/style.css` (penambahan media queries, perbaikan grid).
+- Penyesuaian kecil di `index.html` jika diperlukan.
 
 **Dependency:** Tidak ada.
 
-**Definition of Done:**  
-Jalankan `init_db()` → file `faceai.db` muncul dengan tabel yang benar.
+**Definition of Done:**
+
+- Teks terbaca jelas, tidak terlalu kecil/besar.
+- Di lebar 1280px dan 1920px, tata letak tetap proporsional.
+- Panel laporan menggunakan dua kolom untuk kategori.
 
 **Testing Checklist:**
 
-- Panggil `HistoryService.create(...)` dummy dan pastikan record tersimpan.
-- Uji query semua record.
+- Buka di resolusi berbeda, periksa kerapihan.
+- Pastikan tidak ada elemen yang bertabrakan.
 
-**Risiko:**  
-Migrasi skema di masa depan; gunakan versioning sederhana.
+**Risiko:** Menambah kompleksitas CSS; mitigasi dengan pendekatan mobile‑first.
 
-**Catatan Engineering:**  
-Gunakan `sqlite3` modul standar, tidak perlu ORM untuk menjaga kesederhanaan. Fungsi database akan diisolasi di `history_service.py`.
+**Catatan Engineering:** Gunakan variabel CSS yang sudah ada untuk warna dan border.
 
 ---
 
-### Stage 11.2 — Save Analysis Service
+### Stage 12.2 — Loading States & Empty States
 
-**Objective:**  
-Mengimplementasikan penyimpanan otomatis setiap kali report selesai dibuat, dengan menyimpan gambar asli, report JSON, dan metadata ke database dan folder.
+**Objective:** Menampilkan indikator progres selama upload/analisis dan pesan informatif saat data kosong.
 
-**Mengapa diperlukan:**  
-Ini adalah inti dari history: menangkap hasil tanpa intervensi.
+**Mengapa diperlukan:** Pengguna harus mendapat umpan balik bahwa aplikasi sedang bekerja, bukan error.
 
-**Input:**
-
-- `Report` object (dari M10)
-- Path gambar asli (hasil upload)
-- Versi model & preprocessing (dari config)
+**Input:** Status dari `capture.js` dan `history.js`.
 
 **Process:**
 
-- Buat fungsi `save_analysis(report, image_path, model_ver, prep_ver)` di `history_service.py`:
-  1. Generate UUID.
-  2. Simpan record ke database dengan semua field.
-  3. (Opsional) Salin gambar asli ke folder `history/<id>/original.jpg` jika diinginkan. Untuk sederhana, kita biarkan gambar di `uploads/`.
-  4. Return `analysis_id`.
-- Panggil fungsi ini di endpoint `/api/analyze` (atau `/api/report`) setelah report terbentuk, sebelum response.
+- Ubah tombol “Uploading…” menjadi spinner + teks.
+- Setelah report dipanggil, di area laporan tampilkan “Analyzing…” sampai data muncul.
+- Di panel history, jika daftar kosong, tampilkan “No analysis history yet.”
+- Di history detail, jika gagal memuat, tampilkan pesan error terstruktur.
 
-**Output:**  
-Record baru di database; gambar tetap ada.
+**Output:** Tidak ada layar kosong tanpa informasi; pengguna tahu apa yang terjadi.
 
 **Deliverables:**
 
-- `backend/app/services/history_service.py` (implementasi `save_analysis`)
-- Modifikasi endpoint `/api/analyze` (atau `/api/report`) untuk memanggil service.
+- Modifikasi `frontend/js/modules/capture.js` (onContinue, fetchReport).
+- Modifikasi `frontend/js/modules/history.js` (renderList, showDetail).
+- CSS tambahan untuk spinner (dapat dibuat dengan animasi CSS).
 
-**Dependency:** Stage 11.1.
-
-**Definition of Done:**  
-Setelah memanggil `/api/analyze`, data muncul di database.
-
-**Testing Checklist:**
-
-- Lakukan analisis via API, cek database apakah ada record baru.
-- Pastikan `image_path` sesuai.
-- Uji dengan report kosong (edge case, harusnya tidak terjadi).
-
-**Risiko:**  
-Duplikasi gambar jika endpoint dipanggil ulang; dicegah dengan tidak menyimpan ulang gambar.
-
-**Catatan Engineering:**  
-Gunakan konfigurasi `MODEL_VERSION` dan `PREPROCESSING_VERSION` di `config.py` agar mudah diubah.
-
----
-
-### Stage 11.3 — API Endpoints for History Management
-
-**Objective:**  
-Menyediakan endpoint untuk mengakses, menghapus, dan mengekspor riwayat analisis.
-
-**Mengapa diperlukan:**  
-Frontend membutuhkan akses ke data riwayat, dan pengguna ingin mengelola datanya.
-
-**Input:**
-
-- Database record.
-
-**Process:**
-
-- Buat `backend/app/api/history.py` dengan router:
-  - `GET /api/history` → list semua analisis (dengan paginasi? untuk MVP, sederhana). Kembalikan array berisi `id`, `timestamp`, `overall_score`, `thumbnail_url` (null), `strengths`, dll.
-  - `GET /api/history/{id}` → detail lengkap termasuk report.
-  - `DELETE /api/history/{id}` → hapus record dan (opsional) gambar terkait.
-  - `GET /api/history/{id}/export` → unduh report sebagai file JSON.
-- Gunakan `history_service` untuk query database.
-
-**Output:**  
-Response JSON yang sesuai.
-
-**Deliverables:**
-
-- `backend/app/api/history.py`
-- Daftarkan router di `main.py`
-
-**Dependency:** Stage 11.2 (data harus sudah ada).
+**Dependency:** Stage 12.1 (agar tampilan spinner rapi).
 
 **Definition of Done:**
 
-- `/api/history` mengembalikan list.
-- `/api/history/{id}` mengembalikan detail.
-- `DELETE` menghapus record.
+- Saat upload dimulai, tombol berubah spinner.
+- Saat menunggu report, muncul teks “Analyzing…”.
+- History kosong menampilkan pesan yang sesuai.
 
 **Testing Checklist:**
 
-- Simpan beberapa analisis, lalu akses list.
-- Hapus satu, cek apakah hilang.
-- Ekspor report, verifikasi file JSON valid.
+- Lakukan analisis, perhatikan tombol dan area laporan.
+- Hapus semua history, buka panel history.
+- Putuskan koneksi, coba fetch history.
 
-**Risiko:**  
-Penghapusan gambar harus hati-hati; jika gambar digunakan oleh record lain? Tidak mungkin karena setiap analisis punya gambar sendiri. Namun jika gambar yang sama digunakan di beberapa analisis (misal upload ulang file yang sama), kita tidak boleh menghapus gambar begitu saja. Kita bisa simpan reference count, atau lebih sederhana: saat delete, hanya hapus record database, biarkan gambar tetap ada di `uploads/` (akan dibersihkan secara periodik). Untuk MVP, kita hapus record saja, gambar tetap ada untuk kesederhanaan.
+**Risiko:** Timing penggantian teks; gunakan flag state.
 
-**Catatan Engineering:**  
-Gunakan pydantic model untuk response list agar konsisten.
+**Catatan Engineering:** Spinner dapat dibuat dengan CSS `@keyframes`. Hanya tambahkan class `spinner` ke tombol.
 
 ---
 
-### Stage 11.4 — Frontend History UI
+### Stage 12.3 — Micro‑Interactions & Smooth Transitions
 
-**Objective:**  
-Menampilkan daftar riwayat di frontend dan memungkinkan pengguna melihat detail, menghapus, dan mengunduh laporan.
+**Objective:** Menambahkan animasi ringan untuk memperhalus pengalaman pengguna.
 
-**Mengapa diperlukan:**  
-Pengguna harus bisa mengakses history dari antarmuka.
+**Mengapa diperlukan:** Aplikasi terasa lebih modern dan responsif dengan transisi halus.
 
-**Input:**  
-API dari Stage 11.3.
+**Input:** Perubahan state, tampil/sembunyi elemen.
 
 **Process:**
 
-- Buat file `frontend/js/modules/history.js` dengan fungsi untuk fetch history, render list, detail modal, delete, export.
-- Tambahkan tombol "History" di UI setelah capture selesai (atau di menu terpisah). Untuk MVP, kita bisa menampilkan daftar history di bawah report, atau di tab.
-- Sederhana: setelah report muncul, di bawahnya ada tombol "View History" yang mengganti tampilan dengan daftar history (fetch dari `/api/history`). Atau kita buat panel terpisah yang selalu bisa diakses.
-- Implementasi: buat div `#history-panel`, sembunyikan saat capture, tampilkan saat user klik "History". Di dalamnya, render list dengan `fetch` dan template literal.
+- Tambahkan transisi CSS (`transition: opacity 0.3s`) pada panel laporan, history, dan indikator.
+- Untuk countdown, tambahkan animasi scale-up/scale-down setiap angka.
+- Saat bounding box muncul/hilang, gunakan transisi opacity untuk mengurangi flicker.
+- Preview gambar setelah capture: fade‑in.
 
-**Output:**  
-Antarmuka riwayat berfungsi.
+**Output:** Pergerakan elemen terasa halus, tidak kaku.
 
 **Deliverables:**
 
-- `frontend/js/modules/history.js`
-- Modifikasi `frontend/index.html` (tambah div panel)
-- Modifikasi `frontend/js/capture.js` untuk menampilkan panel history.
+- `frontend/css/style.css` (tambahan transisi dan keyframes sederhana).
+- Modifikasi `frontend/js/ui/ui.js` (untuk menambah/menghapus class transisi).
 
-**Dependency:** Stage 11.3 (API harus berfungsi).
+**Dependency:** Stage 12.2 (indikator loading sudah ada, transisi akan meningkatkan).
 
 **Definition of Done:**
 
-- Setelah beberapa analisis, klik History menampilkan daftar.
-- Klik item history menampilkan detail (tampilan mirip report).
-- Tombol delete berfungsi.
-- Tombol export mengunduh JSON.
+- Panel laporan dan history muncul dengan fade‑in.
+- Countdown angka membesar dan mengecil secara halus.
+- Bounding box tidak langsung hilang, tetapi memudar dalam 100ms.
 
 **Testing Checklist:**
 
-- Uji dengan 0, 1, banyak history.
-- Uji delete.
-- Uji export.
+- Amati muncul/hilangnya laporan dan history.
+- Perhatikan countdown.
+- Perhatikan bounding box saat wajah keluar-masuk.
 
-**Risiko:**  
-UI menjadi kompleks; jaga agar tidak merusak alur capture.
+**Risiko:** Animasi berlebihan mengganggu; jaga durasi singkat (≤300ms).
 
-**Catatan Engineering:**  
-Gunakan `fetch` dengan error handling. Simpan history di state frontend? Tidak perlu; panggil API setiap kali panel dibuka.
+**Catatan Engineering:** Gunakan `will-change` atau `transform` untuk performa GPU.
 
 ---
 
-## Langkah 6 — Urutan Stage yang Direkomendasikan
+### Stage 12.4 — Camera & Detection Performance Tuning
 
-11.1 → 11.2 → 11.3 → 11.4. Setiap stage bergantung pada sebelumnya.
+**Objective:** Menurunkan beban CPU tanpa mengorbankan pengalaman deteksi.
+
+**Mengapa diperlukan:** Pengguna mungkin memiliki laptop dengan spesifikasi rendah; kita harus menjaga FPS dan responsivitas UI.
+
+**Input:** Konfigurasi camera dan detection.
+
+**Process:**
+
+- Di `config.js`, ubah `FPS_LIMIT` menjadi 20.
+- Di `camera.js`, ubah ideal resolution menjadi `width: 1280, height: 720` (sudah). Tidak perlu diubah.
+- Di `detection.js`, pastikan throttle diterapkan.
+- Nonaktifkan deteksi saat tidak diperlukan (sudah ada di `app.js` saat tab hidden).
+- Di `quality.js`, pertahankan throttle 3 frame.
+
+**Output:** CPU usage turun ~10‑15%, deteksi tetap responsif.
+
+**Deliverables:**
+
+- Perubahan konstanta di `config.js`.
+
+**Dependency:** Stage 12.1‑12.3 (UI sudah rapi, tidak terpengaruh).
+
+**Definition of Done:**
+
+- Pada laptop i5 generasi ke‑8, CPU usage saat deteksi di bawah 20%.
+- Bounding box masih mulus.
+
+**Testing Checklist:**
+
+- Buka Task Manager, pantau CPU usage sebelum dan sesudah.
+- Bandingkan FPS deteksi (subjektif).
+
+**Risiko:** FPS terlalu rendah menyebabkan bounding box patah‑patah; uji dengan 20 FPS, jika kurang nyaman naikkan ke 25.
+
+**Catatan Engineering:** FPS limit adalah `1000 / FPS_LIMIT` ms antar frame. Semakin kecil, semakin berat.
 
 ---
 
-## Langkah 7 — Best Practices & Risiko Jangka Panjang
+### Stage 12.5 — Backend Warm‑Up & Caching
 
-- **Modularitas:** History service adalah modul terpisah, tidak bergantung pada API. Dapat digunakan oleh background job di masa depan.
-- **Scalability:** SQLite cukup untuk ribuan record. Jika nanti perlu skalabilitas tinggi, migrasi ke PostgreSQL tanpa mengubah interface service.
-- **Backup:** Simpan report JSON di folder `history/` sebagai cadangan, atau setidaknya sediakan endpoint export massal.
-- **Data immutability:** Jangan update record setelah dibuat. Jika ada revisi model, buat analisis baru.
-- **Privacy:** Gambar asli mungkin mengandung informasi sensitif. Pastikan akses endpoint history dilindungi (untuk development tidak masalah). Di masa depan, tambahkan autentikasi.
-- **Pembersihan:** Jangan hapus gambar secara otomatis; biarkan pengguna menghapus melalui UI. Untuk mencegah penumpukan, bisa ada batasan jumlah maksimum history (opsional).
+**Objective:** Mengurangi latensi permintaan pertama dengan memanaskan model AI.
 
-Dengan desain ini, Milestone 11 akan menghasilkan sistem history yang kokoh dan siap berkembang bersama FaceAI. Saya mohon persetujuan untuk memulai implementasi Stage 11.1.
+**Mengapa diperlukan:** Pengguna pertama setelah server restart akan menunggu 2‑3 detik lebih lama karena model belum dimuat. Warming‑up menghilangkan kejutan ini.
+
+**Input:** Server startup.
+
+**Process:**
+
+- Di event `startup` FastAPI, lakukan `detector._initialize()` dan `detector.model.get()` dengan gambar dummy (gambar hitam kecil) untuk memicu loading semua model.
+- Simpan embedding cache jika nanti digunakan.
+- Jangan tambahkan logging berlebihan.
+
+**Output:** Setiap permintaan pertama setelah restart memiliki latensi yang sama dengan permintaan berikutnya.
+
+**Deliverables:**
+
+- Modifikasi `backend/app/main.py` untuk menambahkan `@app.on_event("startup")`.
+
+**Dependency:** Stage 8.1 (detector harus sudah ada).
+
+**Definition of Done:**
+
+- Setelah server restart, permintaan `/api/upload` + `/api/report` selesai dalam waktu < 3 detik.
+- Tanpa warm‑up, permintaan pertama bisa memakan waktu 4‑5 detik.
+
+**Testing Checklist:**
+
+- Restart server, lalu segera kirim gambar. Catat waktu.
+- Restart server, tunggu beberapa detik, kirim gambar. Bandingkan.
+
+**Risiko:** Gambar dummy mungkin tidak cukup untuk memuat semua model; gunakan `detector._initialize()` yang sudah memuat semua model.
+
+**Catatan Engineering:** Pastikan warm‑up tidak gagal meskipun gambar dummy tidak valid; gunakan try‑except.
+
+---
+
+### Stage 12.6 — Memory & Resource Cleanup
+
+**Objective:** Memastikan tidak ada kebocoran memori setelah penggunaan jangka panjang.
+
+**Mengapa diperlukan:** Pengguna dapat melakukan beberapa analisis berturut‑turut; akumulasi objek yang tidak dibersihkan dapat menyebabkan crash.
+
+**Input:** Event retake, tab close, window unload.
+
+**Process:**
+
+- Di `capture.js` saat retake, pastikan `lastCapture` dihapus, canvas preview dibersihkan.
+- Di `camera.js`, saat `stop()`, set `videoElement.srcObject = null`.
+- Di `detection.js`, saat `stop()`, jangan hanya menghentikan loop, tapi juga pastikan tidak ada callback tertunda.
+- Di `history.js`, saat panel ditutup, hapus referensi DOM yang besar.
+- Di `app.js` event `beforeunload`, panggil `cleanup()`.
+
+**Output:** Setelah 10 kali analisis, penggunaan memori tetap stabil.
+
+**Deliverables:**
+
+- Modifikasi kecil di beberapa file.
+
+**Dependency:** Stage 12.4 (performa sudah dioptimasi, bersihkan setelah).
+
+**Definition of Done:**
+
+- Profil memori di Chrome DevTools menunjukkan tidak ada peningkatan yang signifikan setelah penggunaan berulang.
+
+**Testing Checklist:**
+
+- Gunakan tab Performance, lakukan capture beberapa kali, periksa heap.
+
+**Risiko:** Over‑cleanup menyebabkan variabel tidak terdefinisi; uji retake dengan hati‑hati.
+
+**Catatan Engineering:** Jangan menghapus objek yang mungkin masih digunakan.
+
+---
+
+### Stage 12.7 — Final Performance Audit & Accessibility Tweaks
+
+**Objective:** Melakukan pengujian menyeluruh, menambahkan atribut aksesibilitas dasar, dan memastikan kesiapan rilis.
+
+**Mengapa diperlukan:** Sebelum melanjutkan ke dokumentasi dan rilis, kita harus memastikan kualitas.
+
+**Input:** Semua stage sebelumnya.
+
+**Process:**
+
+- Audit dengan Lighthouse (Performance, Accessibility).
+- Tambahkan `aria-label` pada tombol utama.
+- Pastikan kontras warna mencukupi (teks pada latar belakang gelap).
+- Perbaiki peringatan yang mungkin muncul.
+- Uji di beberapa browser (Chrome, Edge, Firefox).
+
+**Output:** Skor Lighthouse minimal 90 untuk Performance, 100 untuk Accessibility.
+
+**Deliverables:**
+
+- Perbaikan kecil di `index.html` dan `style.css`.
+
+**Dependency:** Stage 12.1‑12.6.
+
+**Definition of Done:**
+
+- Lighthouse report menunjukkan tidak ada masalah kritis.
+- Tidak ada error di console.
+
+**Testing Checklist:**
+
+- Jalankan Lighthouse di tab Incognito.
+- Uji di browser berbeda.
+
+**Risiko:** Perubahan aksesibilitas mungkin memerlukan penyesuaian struktur HTML; minimal saja.
+
+**Catatan Engineering:** Gunakan alat bantu seperti axe DevTools.
+
+---
+
+## Langkah 7 — Urutan Stage yang Direkomendasikan
+
+12.1 → 12.2 → 12.3 → 12.4 → 12.5 → 12.6 → 12.7
+
+Urutan ini didasarkan pada: perbaiki tampilan terlebih dahulu agar pengujian lebih nyaman, lalu optimasi beban, lalu pengujian akhir.
+
+---
+
+## Langkah 8 — Best Practices & Risiko Jangka Panjang
+
+- **Jangan mengorbankan kualitas gambar** demi performa upload; gunakan kompresi JPEG yang masih menghasilkan gambar tajam (kualitas 0.8–0.9).
+- **Pertahankan modularitas** — setiap perbaikan UI hanya mengubah CSS atau JS terkait, tidak merusak pipeline.
+- **Uji dengan throttling jaringan** untuk memastikan indikator loading bekerja.
+- **Pertimbangkan penggunaan Service Worker** di masa depan untuk caching offline (tidak untuk sekarang).
+- **Jangan menambahkan library eksternal** — semua animasi dan spinner dibuat dengan CSS murni.
+- **Risiko utama**: perubahan performa mungkin menyebabkan deteksi melambat; jika FPS < 15, naikkan batas FPS kembali.
+
+Dengan desain ini, Milestone 12 akan menghasilkan aplikasi FaceAI yang tidak hanya berfungsi, tetapi juga nyaman dan profesional untuk digunakan. Saya mohon persetujuan untuk memulai implementasi Stage 12.1.
