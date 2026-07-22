@@ -2,11 +2,13 @@ from fastapi import FastAPI
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from app.api import upload, preprocessing  # tambah preprocessing
+from app.api import upload, preprocessing, analysis
 
 app = FastAPI(title="FaceAI Backend", version="0.1.0")
 
 app.include_router(upload.router)
 app.include_router(preprocessing.router)   # tambah
+app.include_router(analysis.router)
 
 # Handler untuk validasi error (sudah ada)
 @app.exception_handler(RequestValidationError)
