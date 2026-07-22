@@ -150,6 +150,27 @@ FaceAI.capture = (function () {
 
     content.innerHTML = html;
     container.style.display = "block";
+
+    // Tampilkan tombol View History
+    const historyActions = document.getElementById("history-actions");
+    if (historyActions) {
+      historyActions.style.display = "block";
+    }
+    // Jika elemen belum ada, kita bisa buat secara dinamis
+    if (!document.getElementById("view-history-btn")) {
+      const btn = document.createElement("button");
+      btn.id = "view-history-btn";
+      btn.className = "btn btn--secondary";
+      btn.textContent = "View History";
+      btn.addEventListener("click", () => {
+        // Sembunyikan report container, tampilkan history panel
+        document.getElementById("report-container").style.display = "none";
+        FaceAI.history.show();
+      });
+      // Tempatkan di bawah report container
+      const container = document.getElementById("report-container");
+      container.parentNode.insertBefore(btn, container.nextSibling);
+    }
   }
 
   function checkState() {
@@ -174,6 +195,11 @@ FaceAI.capture = (function () {
     const video = FaceAI.ui.getVideoElement();
     FaceAI.detection.start(video);
     FaceAI.state.set("CAMERA_READY");
+
+    const viewBtn = document.getElementById("view-history-btn");
+    if (viewBtn) viewBtn.style.display = "none";
+    FaceAI.history.hide();
+    document.getElementById("report-container").style.display = "none";
   }
 
   async function onContinue() {

@@ -54,6 +54,16 @@
         <div id="report-content"></div>
       </div>
 
+      <!-- History Panel (Stage 11.4) -->
+      <div id="history-panel" class="history-panel" style="display: none">
+        <div class="history-header">
+          <h3>Analysis History</h3>
+          <button id="close-history-btn" class="btn btn--small">Close</button>
+        </div>
+        <div id="history-list"></div>
+        <div id="history-detail" style="display: none"></div>
+      </div>
+
       <section class="system-status" id="system-status">
         <div class="system-status__item" id="status-backend">
           <span class="system-status__label">Backend</span>
@@ -120,6 +130,7 @@
     <script src="js/modules/upload.js"></script>
     <script src="js/modules/quality.js"></script>
     <script src="js/modules/capture.js"></script>
+    <script src="js/modules/history.js"></script>
     <script src="js/app.js"></script>
   </body>
 </html>

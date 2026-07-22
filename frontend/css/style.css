@@ -317,3 +317,41 @@ body {
   margin-left: 1.5rem;
   padding: 0.2rem 0;
 }
+
+/* History Panel */
+.history-panel {
+  background: var(--color-surface);
+  border-radius: var(--border-radius);
+  padding: 1.5rem;
+  margin-top: 1rem;
+  color: var(--color-text);
+}
+.history-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+.history-list-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.6rem 0;
+  border-bottom: 1px solid var(--color-inactive);
+  cursor: pointer;
+}
+.history-list-item:hover {
+  background: var(--color-bg);
+}
+.history-list-item .score {
+  font-weight: bold;
+  color: var(--color-primary);
+}
+.history-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+.btn--small {
+  padding: 0.3rem 0.8rem;
+  font-size: 0.85rem;
+}
