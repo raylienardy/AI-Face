@@ -2,9 +2,11 @@ from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware          # ← TAMBAHKAN IMPORT INI
+from app.database import init_db
 
 from app.api import upload, preprocessing, analysis, report
 
+init_db()
 app = FastAPI(title="FaceAI Backend", version="0.1.0")
 
 # ----------------------------------------------------------------
