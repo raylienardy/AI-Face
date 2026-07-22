@@ -1,29 +1,24 @@
 from fastapi import FastAPI, Request
-from fastapi.middleware.cors import CORSMiddleware
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from app.api import upload
 
 app = FastAPI(title="FaceAI Backend", version="0.1.0")
 
-# CORS (dari stage sebelumnya)
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["http://localhost:8080"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+app.include_router(upload.router)
 
-# Tangani error validasi request (misal file tidak dikirim)
+# Handler untuk validasi error (misal file tidak disertakan)
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request: Request, exc: RequestValidationError):
     return JSONResponse(
         status_code=422,
-        content={"detail": "Invalid request: file is required or invalid format."}
+        content={
+            "status": "error",
+            "message": "Validation error: " + ", ".join(
+                f"{err['loc'][-1]}: {err['msg']}" for err in exc.errors()
+            )
+        }
     )
-
-app.include_router(upload.router)
 
 @app.get("/")
 async def root():
