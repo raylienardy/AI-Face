@@ -1,19 +1,19 @@
 /**
  * FaceAI Upload Module
- * Version: 0.1 – Milestone 7 Stage 7.4
+ * Version: 0.2 – Milestone 7 Stage 7.4
  *
  * Sends the captured canvas to the backend via HTTP multipart upload.
- * Includes timeout and error classification.
+ * Includes timeout and detailed error classification.
  */
 "use strict";
 
 FaceAI.upload = (function () {
-  const UPLOAD_TIMEOUT_MS = 15000; // 15 detik
+  const TIMEOUT_MS = 15000; // 15 detik
 
   return {
     /**
      * Upload a canvas as JPEG to the backend.
-     * @param {HTMLCanvasElement} canvas - captured image
+     * @param {HTMLCanvasElement} canvas
      * @returns {Promise<object>} backend response (JSON)
      */
     async send(canvas) {
@@ -21,25 +21,21 @@ FaceAI.upload = (function () {
         throw new Error("No canvas provided");
       }
 
-      // Convert canvas to Blob (JPEG, quality 0.9)
+      // Convert canvas to Blob
       const blob = await new Promise((resolve, reject) => {
         canvas.toBlob(
-          (blob) =>
-            blob ? resolve(blob) : reject(new Error("Canvas toBlob failed")),
+          (b) => (b ? resolve(b) : reject(new Error("Canvas toBlob failed"))),
           "image/jpeg",
           0.9,
         );
       });
 
-      // Build FormData
       const formData = new FormData();
       formData.append("file", blob, "capture.jpg");
 
       const url = FaceAI.config.BACKEND_UPLOAD_URL;
-
-      // AbortController for timeout
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), UPLOAD_TIMEOUT_MS);
+      const timeoutId = setTimeout(() => controller.abort(), TIMEOUT_MS);
 
       try {
         const response = await fetch(url, {
@@ -50,12 +46,12 @@ FaceAI.upload = (function () {
         clearTimeout(timeoutId);
 
         if (!response.ok) {
-          let detail = `Server error (${response.status})`;
+          let detail = `Server error: ${response.status}`;
           try {
             const errData = await response.json();
             detail = errData.detail || detail;
           } catch (_) {
-            /* ignore parse error */
+            /* parse error ignored */
           }
           throw new Error(detail);
         }
@@ -63,13 +59,20 @@ FaceAI.upload = (function () {
         return await response.json();
       } catch (error) {
         clearTimeout(timeoutId);
+
+        // Klasifikasi error
         if (error.name === "AbortError") {
-          throw new Error("Upload timed out. Please check your connection.");
+          throw new Error(
+            "Upload timed out. Please check your connection and try again.",
+          );
         }
         if (error instanceof TypeError) {
-          throw new Error("Network error. Please check your connection.");
+          // Network error (fetch gagal)
+          throw new Error(
+            "Network error. Please check your internet connection.",
+          );
         }
-        // Re-throw other errors (server, validation)
+        // Error lain (server, validasi) – lempar ulang dengan pesan yang sudah ada
         throw error;
       }
     },
