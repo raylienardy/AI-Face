@@ -2,7 +2,10 @@ import sys
 sys.path.insert(0, '.')
 import cv2
 from app.services.landmark_extractor import extract_landmarks
-from app.services.region_analyzer import analyze_all_regions
+from app.services.region_analyzer import (
+    analyze_eyes, analyze_eyebrows, analyze_nose,
+    analyze_mouth, analyze_jaw, analyze_cheek, analyze_all_regions
+)
 
 img = cv2.imread("test.jpg")
 if img is None:
