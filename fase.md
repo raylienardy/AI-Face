@@ -1,248 +1,255 @@
-# Milestone 7 — Backend Integration: Evaluasi & Perancangan
+# Milestone 8 — Face Preprocessing: Evaluasi & Perancangan
 
-**Status:** Draft  
+**Status:** Draft untuk persetujuan Founder  
 **Peran:** Senior AI Engineer
 
 ---
 
-## Step 1 — Recall Knowledge dari Empat Repositori
+## Step 1 — Recall Knowledge
 
 ### Facial Beauty Prediction
 
-- **Pelajaran penting:** Model bekerja pada gambar yang sudah diproses sepenuhnya, bukan pada stream. Seluruh pipeline inferensi bergantung pada input gambar yang sudah bersih dan konsisten.
-- **Pipeline:** Preprocess gambar → forward ke backbone CNN → ambil distribusi skor.
-- **Preprocessing:** Gambar di-resize, dinormalisasi (meskipun ada inkonsistensi di kode). Kualitas input sangat mempengaruhi output.
-- **Deployment/inference:** Model PyTorch disimpan dan dimuat ulang. Inferensi dilakukan pada gambar tunggal.
-- **Layak diadopsi:** Pemisahan tegas antara capture dan analisis. Gambar statis adalah unit kerja backend.
-- **Hindari:** Inkonsistensi preprocessing antara training dan inference. Tidak ada normalisasi standar.
+- **Preprocessing pipeline:** Gambar di-resize ke 256 lalu RandomCrop 224 (training), tanpa normalisasi ImageNet (hanya ToTensor). Inkonsistensi ini dapat menurunkan akurasi model pretrained.
+- **Pelajaran:** Input harus konsisten antara training dan inference. Hindari resize yang mengubah aspek rasio secara paksa (distorsi). Normalisasi harus sesuai dengan yang diharapkan model.
 
-### face-rating
+### face‑rating
 
-- **Feature engineering:** Geometri wajah (rasio landmark) adalah fitur kuat tetapi harus dihitung dari gambar yang sudah di-crop dan di-align.
-- **Workflow:** Landmark diekstrak dari gambar diam, bukan dari video.
-- **Pelajaran:** Backend harus menerima gambar yang sudah siap, tetapi preprocessing berat (alignment, crop) sebaiknya dilakukan di backend agar konsisten.
+- **Preprocessing:** Mengandalkan 68 landmark wajah untuk menghitung 11.628 fitur geometris. Landmark hanya akurat jika wajah sudah di-align dan di-crop dengan baik.
+- **Pelajaran:** Alignment yang presisi adalah kunci untuk fitur geometris yang andal. Crop menghilangkan background dan fokus pada wajah.
 
 ### MEBeauty
 
-- **Pipeline:** Deteksi wajah → crop & alignment (di backend) → resize → normalisasi → model regresi.
-- **Backend flow:** Gambar mentah diunggah → preprocessing → inferensi → hasil dikembalikan.
-- **Penting:** Preprocessing yang konsisten dan terpisah dari frontend sangat krusial.
-- **Deployment:** Model PyTorch di backend, API menerima gambar.
+- **Backend preprocessing:** Face crop & alignment menggunakan DeepFace (MTCNN/RetinaFace) sebelum ekstraksi fitur atau inferensi. Menekankan konsistensi preprocessing karena model dilatih dengan data yang sudah di-crop dan di-align.
+- **Pelajaran penting:** Preprocessing bukan sekadar langkah opsional—ia menentukan apakah model menerima input yang valid dan seragam. Tanpa alignment yang baik, distribusi data inference akan berbeda dengan training, merusak akurasi.
 
 ### DeepFace
 
-- **Pipeline:**  
-  Detect  
-  ↓  
-  Align  
-  ↓  
-  Normalize  
-  ↓  
-  Represent  
-  ↓  
-  Verify / Analyze
-- **Kenapa sangat baik:** Setiap tahap berdiri sendiri, mudah diuji, dan bisa diganti tanpa merusak yang lain. Pipeline ini menjadi cetak biru backend FaceAI.
+- **Pipeline:** Detect → Align → Normalize → Represent → Verify/Analyze
+- **Mengapa alignment wajib:** Mengurangi variasi pose dan rotasi, sehingga embedding wajah menjadi lebih diskriminatif. DeepFace melaporkan peningkatan akurasi 6% hanya dari alignment.
+- **Mengapa crop wajib:** Memfokuskan model hanya pada wajah, bukan latar belakang. Mencegah model belajar dari noise.
+- **Mengapa resize wajib:** Model memerlukan ukuran input tetap. DeepFace menggunakan resize dengan padding (letterboxing) untuk mempertahankan aspek rasio, menghindari distorsi.
+- **Mengapa normalisasi wajib:** Setiap model pretrained memiliki ekspektasi rentang nilai tertentu (mis. mean subtraction). Tanpa normalisasi yang tepat, fitur tidak akan optimal.
 
 ---
 
 ## Step 2 — Ingat Tujuan FaceAI
 
-Frontend hanya bertugas menangkap foto terbaik. Backend melakukan **seluruh** analisis AI. Tidak ada inferensi real‑time di browser. Milestone 7 adalah jembatan antara keduanya: **mengirim foto dari frontend ke backend dengan aman dan andal**.
+Frontend hanya bertugas menghasilkan foto terbaik. **Semua preprocessing sekarang dilakukan di backend.** Tujuan Milestone 8 adalah mengubah gambar mentah yang diunggah menjadi satu gambar wajah yang siap dijadikan input model AI.
 
 ---
 
-## Step 3 — Evaluasi Milestone 7
+## Step 3 — Evaluasi Milestone 8
 
-Deliverable yang diusulkan (Upload API, Multipart Upload, Progress Indicator, Error Handling, Response Handling) sudah mencakup kebutuhan dasar komunikasi frontend‑backend. Namun, berdasarkan praktik terbaik dari keempat repositori, saya menambahkan:
+Pipeline yang diberikan:
 
-- **Validasi ukuran dan format gambar** di sisi server agar tidak menerima file sembarangan.
-- **Response standar** (JSON) yang konsisten, mencakup status, ID gambar, dan error message.
-- **Logging** dasar di backend untuk memudahkan debugging.
-- **Konfigurasi endpoint** yang terpusat di frontend (`config.js`) dan backend (environment variable).
+```
+Image → Face Detection → Face Alignment → Crop Face → Resize → Normalize → Ready For AI
+```
 
-Tidak ada yang perlu dihapus. Urutan stage juga sudah logis: mulai dari API sederhana, lalu integrasi frontend, baru feedback pengguna.
+**Apakah pipeline sudah benar?** Ya, ini adalah urutan standar yang digunakan DeepFace dan MEBeauty. Namun ada beberapa tambahan yang diperlukan agar benar‑benar production‑ready:
+
+1. **Validation/Quality Gate** – Setelah detection, kita harus memastikan bahwa wajah terdeteksi dengan confidence tinggi, hanya satu wajah (atau pilih yang primer), dan pose tidak ekstrem. Jika tidak, tolak gambar tersebut dan beri tahu frontend.
+2. **Letterboxing / Aspect Ratio Preservation** – DeepFace menggunakan resize dengan padding untuk menjaga proporsi wajah. Distorsi akibat resize paksa akan merusak embedding dan prediksi. Ini penting untuk diadopsi.
+3. **Color Space Conversion** – Model tertentu (seperti VGG‑Face) mengharapkan input BGR, sementara yang lain RGB. Kita perlu menyimpan informasi ini sebagai bagian dari normalisasi.
+4. **Landmark Extraction** – Diperlukan untuk alignment (berdasarkan posisi mata). Kita sudah memiliki landmark dari BlazeFace di frontend, tetapi backend sebaiknya melakukan deteksi ulang dengan model yang lebih akurat (misalnya RetinaFace atau MTCNN) untuk mendapatkan landmark yang presisi.
+
+**Apakah ada langkah yang berlebihan?** Saat ini tidak; semua langkah di atas memiliki tujuan jelas dan diadopsi dari repositori referensi.
 
 ---
 
-## Step 4 — Pemecahan Menjadi Stage
+## Step 4 — Review Pipeline
 
-### Stage 7.1 — Backend Upload Endpoint
+Saya mengusulkan pipeline yang sedikit disempurnakan:
 
-**Objective:**  
-Membuat endpoint FastAPI yang menerima file gambar (multipart/form-data), memvalidasi, menyimpan sementara di folder `backend/uploads/`.
+```
+Uploaded Image
+    │
+    ▼
+Validation (format, size, corruption)
+    │
+    ▼
+Face Detection (with confidence & landmarks)
+    │
+    ▼
+Face Alignment (rotation based on eye landmarks)
+    │
+    ▼
+Face Crop (expanded bounding box)
+    │
+    ▼
+Resize with Letterboxing (preserve aspect ratio)
+    │
+    ▼
+Normalization (model‑specific: mean/std or [0,1])
+    │
+    ▼
+Ready for AI (standardized tensor/array)
+```
+
+**Penjelasan tambahan:**
+
+- **Validation** di awal mencegah file corrupt atau tanpa wajah diproses.
+- **Letterboxing** alih‑alih resize paksa akan membuat input lebih stabil, sesuai dengan praktik DeepFace.
+- **Normalization** akan disesuaikan dengan model AI yang akan digunakan nanti; untuk sekarang kita siapkan modul yang mudah dikonfigurasi.
+
+---
+
+## Step 5 — Pemecahan Menjadi Stage
+
+### Stage 8.1 — Backend Setup & Detector Module
+
+**Objective:** Menyiapkan environment backend untuk image processing (OpenCV, InsightFace/DeepFace) dan membuat modul deteksi wajah yang bisa dipanggil.
 
 **Deliverables:**
 
-- Endpoint `POST /api/upload`
-- Validasi ekstensi (jpg, png) dan ukuran maksimal (5 MB).
-- Simpan file dengan nama unik (UUID) di `backend/uploads/`.
-- Response JSON: `{ "status": "ok", "filename": "...", "message": "..." }` atau `{ "status": "error", "message": "..." }`.
-- Menambahkan `python-multipart` ke `requirements.txt`.
+- Instalasi `opencv-python-headless`, `insightface` (atau `deepface`), `onnxruntime`.
+- Modul `backend/app/services/detector.py` dengan fungsi `detect(image) -> [FaceObject]` (bbox, confidence, landmarks).
+- Konfigurasi model deteksi (misal RetinaFace atau SCRFD) di `config.py`.
 
 **Files yang berubah:**
 
-- `backend/app/main.py` – tambah router upload
-- `backend/app/api/upload.py` – file baru
 - `backend/requirements.txt`
-- `backend/uploads/` – folder baru (di-gitignore)
+- `backend/app/services/detector.py`
+- `backend/app/core/config.py`
 
-**Output:**  
-Kirim file via Postman/curl ke `http://localhost:8000/api/upload` → file tersimpan di `uploads/` dan response JSON sukses.
+**Output:** Panggil `detect()` dengan gambar uji → dapatkan bounding box dan landmark.
 
 **Testing:**
 
-- Upload file jpg/png → sukses.
-- Upload file txt atau tanpa file → error 400.
-- File > 5 MB → error 413.
+- Input: gambar wajah frontal → output: 1 wajah dengan confidence > 0.9.
+- Input: gambar tanpa wajah → output: list kosong.
+- Input: gambar multi‑wajah → output: beberapa wajah.
 
-**Dependency:** Tidak ada (backend mandiri).
+**Dependency:** Stage 7.5 (backend logging & config sudah siap).
 
 ---
 
-### Stage 7.2 — Frontend Upload Service
+### Stage 8.2 — Face Validation & Selection
 
-**Objective:**  
-Membuat service `upload.js` di frontend yang mengirimkan canvas hasil capture ke backend menggunakan `fetch` dengan `FormData`.
+**Objective:** Setelah deteksi, validasi apakah ada wajah yang memenuhi syarat, dan pilih satu wajah primer jika lebih dari satu.
 
 **Deliverables:**
 
-- Fungsi `FaceAI.upload.send(canvas)` yang:
-  - Mengonversi canvas ke Blob (JPEG, kualitas 0.9).
-  - Membuat `FormData` dan mengirim via `POST` ke URL di `config.BACKEND_UPLOAD_URL`.
-  - Mengembalikan Promise dengan response JSON.
-- Tambahan konfigurasi di `config.js`: `BACKEND_UPLOAD_URL: 'http://localhost:8000/api/upload'`.
-- Menghubungkan tombol "Continue" di `capture.js` untuk memanggil `FaceAI.upload.send()`.
-- Basic error handling: jika jaringan gagal, tampilkan pesan error.
+- Modul `backend/app/services/validator.py` dengan fungsi `validate_faces(faces) -> primary_face`.
+- Rule: minimal confidence 0.9, landmark mata tersedia, ukuran wajah minimal 100px.
+- Jika tidak ada yang valid, raise `ValidationError`.
 
-**Files yang berubah:**
+**Files:**
 
-- `frontend/js/modules/upload.js` – file baru
-- `frontend/js/core/config.js`
-- `frontend/js/modules/capture.js` – modifikasi handler "Continue"
-- `frontend/index.html` – tambahkan script `upload.js`
+- `backend/app/services/validator.py`
+- `backend/app/exceptions.py` (custom exception)
 
-**Output:**  
-Klik "Continue" setelah capture → console log response dari backend `{ status: "ok", filename: "..." }`. Gambar tersimpan di backend.
+**Output:** Dari hasil deteksi, terpilih satu objek wajah yang siap diproses.
 
 **Testing:**
 
-- Capture, klik Continue → cek console untuk response sukses.
-- Matikan backend → klik Continue → muncul pesan error.
+- Berikan dua wajah (satu kecil, satu besar) → pilih yang besar.
+- Berikan satu wajah blur / low confidence → tolak.
+- Berikan gambar tanpa wajah → tolak dengan error jelas.
 
-**Dependency:** Stage 7.1 harus selesai (backend endpoint sudah berfungsi).
+**Dependency:** Stage 8.1 (detector berfungsi).
 
 ---
 
-### Stage 7.3 — Upload Progress & Feedback
+### Stage 8.3 — Alignment & Crop
 
-**Objective:**  
-Menampilkan indikator progres upload (spinner/teks "Uploading…") dan mengunci tombol "Continue" selama proses upload agar tidak double‑submit.
+**Objective:** Meluruskan wajah berdasarkan posisi mata, kemudian crop area wajah yang sudah di‑align.
 
 **Deliverables:**
 
-- Di `capture.js`, saat upload dimulai:
-  - Tampilkan teks "Uploading…" di tombol Continue dan disable.
-  - Jika sukses, tampilkan "Upload Successful!" sebentar, lalu set state `RESULT_READY` (atau tetap `CAPTURED` untuk sekarang).
-  - Jika gagal, tampilkan pesan error dan enable kembali tombol.
-- Modifikasi `ui.js` untuk mendukung perubahan teks tombol dan disable.
+- Modul `backend/app/services/aligner.py` dengan fungsi `align_face(image, landmarks) -> aligned_face`.
+- Modul `backend/app/services/cropper.py` dengan fungsi `crop_face(image, bbox) -> cropped_face`.
+- Algoritma alignment: hitung sudut rotasi dari mata kiri & kanan, rotasi, lalu crop bounding box yang diperluas.
 
-**Files yang berubah:**
+**Files:**
 
-- `frontend/js/modules/capture.js`
-- `frontend/js/ui/ui.js`
+- `backend/app/services/aligner.py`
+- `backend/app/services/cropper.py`
 
-**Output:**  
-Setelah klik Continue, tombol berubah menjadi "Uploading…" (disabled), lalu berubah menjadi "Upload Successful!" (atau "Upload Failed, Retry") sesuai hasil.
+**Output:** Wajah tegak dengan latar belakang minimal.
 
 **Testing:**
 
-- Upload normal → tombol berubah sesuai tahapan.
-- Matikan koneksi saat upload → tombol kembali enable dan pesan error muncul.
-- Klik ganda tombol → hanya satu upload yang terkirim (karena disabled).
+- Uji dengan gambar wajah miring 30° → hasil wajah lurus, mata horizontal.
+- Uji dengan wajah di pojok gambar → hasil crop tepat di wajah, bukan area kosong.
 
-**Dependency:** Stage 7.2 (upload service) harus selesai.
+**Dependency:** Stage 8.2 (validator memberikan primary face dengan landmarks & bbox).
 
 ---
 
-### Stage 7.4 — Error Handling & Retry
+### Stage 8.4 — Resize & Normalization
 
-**Objective:**  
-Menangani kegagalan upload dengan pesan yang jelas dan memberikan opsi untuk mencoba ulang (Retry) tanpa harus mengulang capture.
+**Objective:** Mengubah ukuran gambar menjadi dimensi tetap dengan tetap menjaga aspek rasio (letterboxing), lalu menormalisasi nilai piksel sesuai kebutuhan model.
 
 **Deliverables:**
 
-- Modifikasi handler "Continue": jika upload gagal, tombol kembali aktif dengan teks "Retry Upload".
-- Error dibedakan: jaringan (fetch error), server error (5xx), validasi (4xx), timeout.
-- Pesan error ditampilkan di area error umum (`FaceAI.ui.showError`).
-- Retry hanya mengirim ulang Blob yang sama (tanpa capture ulang).
+- Modul `backend/app/services/resizer.py` dengan fungsi `resize_letterbox(image, target_size) -> resized`.
+- Modul `backend/app/services/normalizer.py` dengan fungsi `normalize(image, mode) -> normalized`.
+- Mode normalisasi: "base" [0,1], "vggface" (mean subtraction BGR), "facenet" (per‑sample standardization), dll.
 
-**Files yang berubah:**
+**Files:**
 
-- `frontend/js/modules/capture.js`
-- `frontend/js/modules/upload.js` – tambah timeout & error classification
+- `backend/app/services/resizer.py`
+- `backend/app/services/normalizer.py`
 
-**Output:**  
-Skenario gagal → pesan jelas, tombol "Retry Upload", bisa mencoba kembali hingga berhasil atau memilih "Retake".
+**Output:** Gambar berukuran tepat (misal 224x224) dengan piksel dalam rentang yang diharapkan model.
 
 **Testing:**
 
-- Simulasikan server mati → klik Continue → pesan error muncul, tombol "Retry Upload".
-- Hidupkan server → klik "Retry" → upload berhasil.
+- Input gambar portrait → output persegi dengan padding hitam di kiri/kanan, tanpa distorsi.
+- Uji mode normalisasi yang berbeda; periksa rentang nilai piksel hasil.
 
-**Dependency:** Stage 7.3 (progress & feedback) harus selesai.
+**Dependency:** Stage 8.3 (gambar sudah di‑crop).
 
 ---
 
-### Stage 7.5 — Backend Logging & Configuration
+### Stage 8.5 — Pipeline Integration & API Endpoint
 
-**Objective:**  
-Menyempurnakan backend dengan logging, batasan ukuran file, dan konfigurasi yang rapi.
+**Objective:** Menggabungkan semua langkah menjadi satu pipeline yang dapat dipanggil dari endpoint `/api/preprocess`, menghasilkan gambar siap AI.
 
 **Deliverables:**
 
-- Logging dengan `logging` module: setiap upload dicatat (nama file, ukuran, timestamp).
-- Konfigurasi batasan ukuran file di `.env` (contoh: `MAX_UPLOAD_SIZE_MB=5`).
-- Struktur response standar menggunakan Pydantic model.
-- Menambahkan handler untuk `RequestValidationError` agar mengembalikan JSON yang jelas.
+- Modul `backend/app/services/preprocessing.py` yang mengorkestrasi: validasi → deteksi → alignment → crop → resize → normalisasi.
+- Endpoint `POST /api/preprocess` yang menerima file gambar, menjalankan pipeline, dan mengembalikan gambar hasil preprocessing (atau menyimpannya dan mengembalikan path).
+- Response JSON berisi path gambar hasil atau error detail.
 
-**Files yang berubah:**
+**Files:**
 
-- `backend/app/api/upload.py`
-- `backend/app/core/config.py` (atau file `.env` dan pembacaan dengan Pydantic)
-- `backend/app/main.py` – tambah exception handler
-- `backend/requirements.txt` – tambah `python-dotenv` (jika belum)
+- `backend/app/services/preprocessing.py`
+- `backend/app/api/preprocessing.py`
+- `backend/app/main.py` (tambah router)
 
-**Output:**  
-Di console backend, setiap upload tercatat. Response error menjadi lebih informatif.
+**Output:** Kirim gambar via API → dapatkan gambar wajah yang sudah siap untuk AI.
 
 **Testing:**
 
-- Upload file, cek log backend.
-- Kirim file terlalu besar, dapatkan response JSON dengan pesan jelas.
+- Kirim gambar hasil capture dari frontend → dapatkan gambar wajah 224x224 yang tegak, tajam, dan ternormalisasi.
+- Kirim gambar tanpa wajah → error 422.
+- Kirim gambar dengan dua wajah → hanya satu wajah yang diproses (primer).
 
-**Dependency:** Stage 7.1 (backend endpoint dasar).
-
----
-
-## Step 5 — Dependency Check
-
-- **Stage 7.1** adalah fondasi; semua stage lain bergantung padanya.
-- **Stage 7.2** membutuhkan 7.1.
-- **Stage 7.3** membutuhkan 7.2.
-- **Stage 7.4** membutuhkan 7.3.
-- **Stage 7.5** bisa dikerjakan kapan saja setelah 7.1, tetapi idealnya setelah 7.4 untuk menyempurnakan backend berdasarkan pengalaman integrasi.
-
-Urutan pengerjaan disarankan: 7.1 → 7.2 → 7.3 → 7.4 → 7.5.
+**Dependency:** Semua stage sebelumnya (8.1–8.4).
 
 ---
 
-## Step 6 — Engineering Review
+## Step 6 — Dependency Check
 
-- Apakah stage terlalu besar? Tidak, setiap stage hanya menambah satu kemampuan (API, integrasi frontend, feedback, error handling, logging).
-- Over‑engineering? Tidak ada; semua dibutuhkan untuk fondasi yang kokoh menuju milestone berikutnya (preprocessing, AI analysis).
-- Apakah frontend tetap ringan? Ya, hanya menambah modul upload sederhana.
-- Apakah backend menjadi pusat AI? Ya, mulai dari menerima gambar hingga nanti preprocessing dan inferensi.
-- Apakah struktur mudah dikembangkan hingga v1.0? Sangat; pipeline backend sudah mengikuti pola DeepFace (detect → align → …), hanya saja dimulai dari menerima gambar.
-- Pelajaran dari repositori: Semua repositori menekankan konsistensi preprocessing; dengan backend yang menerima gambar utuh, kita bisa memastikan preprocessing berjalan seragam.
+- **Stage 8.1** adalah fondasi; semua stage lain bergantung padanya.
+- **Stage 8.2** membutuhkan 8.1 (detector).
+- **Stage 8.3** membutuhkan 8.2 (face object tervalidasi).
+- **Stage 8.4** membutuhkan 8.3 (gambar ter‑crop).
+- **Stage 8.5** membutuhkan 8.1–8.4.
 
-**Kesimpulan:** Milestone 7 dirancang dengan baik. Stage‑stage di atas akan membangun integrasi frontend‑backend yang andal, modular, dan siap menopang seluruh pipeline AI FaceAI.
+Urutan pengerjaan harus linier: 8.1 → 8.2 → 8.3 → 8.4 → 8.5.
+
+---
+
+## Step 7 — Engineering Review
+
+- **Apakah preprocessing production‑ready?** Ya, setiap langkah mengikuti best practice dari DeepFace dan MEBeauty. Pipeline ini akan menghasilkan input yang konsisten.
+- **Apakah modular?** Setiap langkah adalah modul terpisah yang bisa diuji secara independen. Jika nanti kita ganti model AI, normalizer bisa diubah tanpa menyentuh bagian lain.
+- **Apakah bisa digunakan kembali?** Ya, pipeline ini akan menjadi fondasi untuk semua model AI FaceAI (beauty scoring, recognition, atribut).
+- **Apakah konsisten antara training dan inference?** Ya, karena backend akan menerapkan preprocessing yang sama persis seperti yang digunakan saat melatih model. (Untuk model yang belum kita latih, kita dokumentasikan normalisasi yang dipilih.)
+- **Apakah ada over‑engineering?** Tidak, setiap langkah memiliki justifikasi teknis yang jelas dari repositori referensi.
+- **Apakah ada langkah yang tidak perlu?** Saat ini tidak. Semua langkah (validasi, deteksi, alignment, crop, resize, normalisasi) diperlukan untuk menghasilkan input AI yang berkualitas.
+
+**Kesimpulan:** Milestone 8 dirancang mengikuti cetak biru pipeline DeepFace, diperkuat dengan pembelajaran dari MEBeauty, face‑rating, dan Facial Beauty Prediction. Dengan membagi ke dalam 5 stage kecil, kita dapat membangun fondasi backend AI FaceAI secara bertahap, teruji, dan siap mendukung Milestone 9 (AI Face Analysis).
