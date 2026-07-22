@@ -485,3 +485,47 @@ body {
   color: var(--color-text-muted);
   font-size: var(--font-size-sm);
 }
+
+/* ---------- Transisi & Animasi (Stage 12.3) ---------- */
+.report-container,
+.history-panel {
+  transition: opacity 0.3s ease;
+  opacity: 0; /* mulai tidak terlihat, akan diubah oleh JS */
+}
+.report-container.visible,
+.history-panel.visible {
+  opacity: 1;
+}
+
+/* Countdown pulse */
+.countdown-overlay__text {
+  animation: countdown-pulse 0.5s ease-in-out;
+}
+@keyframes countdown-pulse {
+  0% {
+    transform: scale(0.5);
+    opacity: 0;
+  }
+  50% {
+    transform: scale(1.2);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* Preview image fade in */
+.capture-preview-img {
+  transition: opacity 0.3s ease;
+  opacity: 0;
+}
+.capture-preview-img.visible {
+  opacity: 1;
+}
+
+/* Bounding box canvas fade */
+#face-canvas {
+  transition: opacity 0.15s ease;
+}

@@ -1,6 +1,6 @@
 /**
  * FaceAI UI Module
- * Version: 0.1 – Milestone 4 Stage 4.4
+ * Version: 0.1 – Milestone 12 Stage 12.3
  *
  * Handles all DOM updates: placeholder, button state, status dots, error messages.
  * Drawing functions delegated to FaceAI.drawing.
@@ -10,6 +10,9 @@
 window.FaceAI = window.FaceAI || {};
 
 (function () {
+  // ==========================================
+  // DOM Reference Cache
+  // ==========================================
   const ui = {
     startBtn: document.getElementById("start-camera-btn"),
     video: document.getElementById("camera-video"),
@@ -19,6 +22,9 @@ window.FaceAI = window.FaceAI || {};
     faceDot: document.querySelector("#status-face .system-status__dot"),
   };
 
+  // ==========================================
+  // Public API
+  // ==========================================
   FaceAI.ui = {
     hidePlaceholder() {
       ui.placeholder.classList.add("hidden");
@@ -62,7 +68,11 @@ window.FaceAI = window.FaceAI || {};
       return ui.video;
     },
 
-    // Delegasi drawing (multi box)
+    // Drawing delegation (multi box)
+    drawFaceBox(x, y, width, height, confidence) {
+      FaceAI.drawing.drawBox(x, y, width, height, confidence);
+    },
+
     drawFaceBoxes(boxes) {
       FaceAI.drawing.drawBoxes(boxes);
     },
@@ -71,6 +81,11 @@ window.FaceAI = window.FaceAI || {};
       FaceAI.drawing.clear();
     },
 
+    clearFaceBox() {
+      FaceAI.drawing.clear();
+    },
+
+    // Quality debug (developer mode)
     showQualityDebug(show) {
       const el = document.getElementById("quality-debug");
       if (el) el.style.display = show ? "block" : "none";
@@ -81,11 +96,13 @@ window.FaceAI = window.FaceAI || {};
       if (el) el.textContent = text;
     },
 
+    // Ready indicator
     showReadyIndicator(show) {
       const el = document.getElementById("ready-indicator");
       if (el) el.style.display = show ? "block" : "none";
     },
 
+    // Countdown overlay
     showCountdown(text) {
       const overlay = document.getElementById("countdown-overlay");
       const textEl = document.getElementById("countdown-text");
@@ -98,17 +115,22 @@ window.FaceAI = window.FaceAI || {};
       if (overlay) overlay.style.display = "none";
     },
 
+    // Preview capture
     showPreview(dataURL) {
       const img = document.getElementById("capture-preview");
       if (img) {
         img.src = dataURL;
         img.style.display = "block";
+        img.classList.add("visible");
       }
     },
 
     hidePreview() {
       const img = document.getElementById("capture-preview");
-      if (img) img.style.display = "none";
+      if (img) {
+        img.style.display = "none";
+        img.classList.remove("visible");
+      }
     },
 
     showCaptureButtons() {
@@ -121,10 +143,22 @@ window.FaceAI = window.FaceAI || {};
       if (btns) btns.style.display = "none";
     },
 
-    setButtonText(buttonId, text) {
-      const btn = document.getElementById(buttonId);
-      if (btn) btn.textContent = text;
+    // Alignment preview
+    showAlignedFace(canvas) {
+      const alignCanvas = document.getElementById("align-canvas");
+      if (!alignCanvas || !canvas) return;
+      const ctx = alignCanvas.getContext("2d");
+      alignCanvas.width = FaceAI.config.ALIGN_TARGET_SIZE;
+      alignCanvas.height = FaceAI.config.ALIGN_TARGET_SIZE;
+      ctx.clearRect(0, 0, alignCanvas.width, alignCanvas.height);
+      ctx.drawImage(canvas, 0, 0, alignCanvas.width, alignCanvas.height);
+      document.getElementById("align-preview").style.display = "flex";
     },
+
+    hideAlignedFace() {
+      document.getElementById("align-preview").style.display = "none";
+    },
+
     // Private helper
     _updateDot(element, active) {
       if (!element) return;

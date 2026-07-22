@@ -1,8 +1,9 @@
 /**
  * FaceAI Drawing Module
- * Version: 0.1 – Milestone 4 Stage 4.4
+ * Version: 0.2 – Milestone 12 Stage 12.3
  *
  * Handles canvas overlays: multiple bounding boxes with styles.
+ * Bounding box fades out when no face is detected.
  */
 "use strict";
 
@@ -48,6 +49,7 @@ FaceAI.drawing = (function () {
       const videoEl = FaceAI.ui.getVideoElement();
       syncCanvasSize(videoEl);
 
+      canvas.style.opacity = "1"; // make visible
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       for (const box of boxes) {
         drawSingleBox(box);
@@ -55,13 +57,30 @@ FaceAI.drawing = (function () {
     },
 
     /**
-     * Clear the canvas.
+     * Clear the canvas with a quick fade-out.
      */
     clear() {
       if (!ctx) return;
-      const videoEl = FaceAI.ui.getVideoElement();
-      syncCanvasSize(videoEl);
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      canvas.style.opacity = "0"; // fade out (CSS transition)
+      // content will be erased on the next drawBoxes call
+    },
+
+    /**
+     * Draw a single bounding box (kept for compatibility).
+     */
+    drawBox(x, y, width, height, confidence) {
+      this.drawBoxes([
+        {
+          x,
+          y,
+          w: width,
+          h: height,
+          confidence,
+          color: FaceAI.config.BOX_COLOR,
+          lineWidth: FaceAI.config.BOX_LINE_WIDTH,
+          showConfidence: true,
+        },
+      ]);
     },
   };
 })();

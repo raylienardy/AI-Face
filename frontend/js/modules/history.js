@@ -1,6 +1,6 @@
 /**
  * FaceAI History Module
- * Version: 0.1 – Milestone 11 Stage 11.4
+ * Version: 0.1 – Milestone 12 Stage 12.3
  *
  * Menampilkan riwayat analisis di panel frontend.
  */
@@ -20,6 +20,9 @@ FaceAI.history = (function () {
     closeBtn.addEventListener("click", hidePanel);
   }
 
+  // ==========================================
+  // API Calls
+  // ==========================================
   async function fetchHistory() {
     const res = await fetch(`${API_BASE}/history`);
     if (!res.ok) throw new Error("Failed to fetch history");
@@ -39,11 +42,17 @@ FaceAI.history = (function () {
     return true;
   }
 
+  // ==========================================
+  // Helpers
+  // ==========================================
   function formatDate(isoString) {
     const d = new Date(isoString);
     return d.toLocaleString();
   }
 
+  // ==========================================
+  // Render List
+  // ==========================================
   function renderList(items) {
     if (!items.length) {
       listContainer.innerHTML =
@@ -75,7 +84,6 @@ FaceAI.history = (function () {
     // Event delegation untuk klik item (menuju detail)
     listContainer.querySelectorAll(".history-list-item").forEach((el) => {
       el.addEventListener("click", (e) => {
-        // Jangan navigasi jika tombol delete diklik
         if (e.target.classList.contains("delete-btn")) return;
         const id = el.dataset.id;
         showDetail(id);
@@ -95,17 +103,20 @@ FaceAI.history = (function () {
     });
   }
 
+  // ==========================================
+  // Detail View
+  // ==========================================
   async function showDetail(id) {
     try {
       const detail = await fetchDetail(id);
       const report = detail.report || {};
       const strengths = detail.strengths || [];
-      const suggestions = report.suggestions || []; // dari report, mungkin tidak ada di HistoryItem
-      // Bangun tampilan detail (mirip report)
+      const suggestions = report.suggestions || [];
+
       let html = `<h4>Analysis Detail</h4>
       <p><small>${formatDate(detail.timestamp)}</small></p>
       <p><strong>Overall Score:</strong> ${detail.overall_score?.toFixed(1)} (confidence: ${(detail.confidence * 100)?.toFixed(0)}%)</p>`;
-      // Tampilkan kategori (seperti di report)
+
       const categories = [
         { key: "face_structure", label: "Face Structure" },
         { key: "eyes", label: "Eyes" },
@@ -160,23 +171,31 @@ FaceAI.history = (function () {
     }
   }
 
+  // ==========================================
+  // Panel Toggle
+  // ==========================================
   async function showPanel() {
     panel.style.display = "block";
+    panel.classList.add("visible");
     listContainer.style.display = "block";
     detailContainer.style.display = "none";
     try {
       const items = await fetchHistory();
       renderList(items);
     } catch (err) {
-      listContainer.innerHTML = "<p>Error loading history.</p>";
+      listContainer.innerHTML =
+        '<p class="loading-text">Error loading history.</p>';
     }
   }
 
   function hidePanel() {
+    panel.classList.remove("visible");
     panel.style.display = "none";
   }
 
+  // ==========================================
   // Public API
+  // ==========================================
   return {
     show: showPanel,
     hide: hidePanel,

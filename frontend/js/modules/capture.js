@@ -1,21 +1,31 @@
 /**
  * FaceAI Capture Module
- * Version: 0.1 – Milestone 6 Stage 6.5
+ * Version: 0.1 – Milestone 12 Stage 12.3
+ *
+ * - takeSnapshot(video) → canvas
+ * - State‑driven countdown & auto capture
+ * - Upload, report fetching, display
+ * - Loading states & micro‑interactions
  */
 "use strict";
 
 FaceAI.capture = (function () {
+  // ==========================================
+  // Private State
+  // ==========================================
   let countdownTimer = null;
   let currentCount = 0;
   let isCountingDown = false;
   let stateWatchInterval = null;
   const COUNTDOWN_SECONDS = 3;
-  let lastCapture = null;
+  let lastCapture = null; // HTMLCanvasElement
 
+  // ==========================================
+  // Countdown Logic (private)
+  // ==========================================
   function startCountdown() {
     if (isCountingDown) return;
     isCountingDown = true;
-    FaceAI.state.set("COUNTDOWN");
     currentCount = COUNTDOWN_SECONDS;
     showCurrentCount();
   }
@@ -29,7 +39,6 @@ FaceAI.capture = (function () {
     }
     FaceAI.ui.hideCountdown();
     console.log("Countdown cancelled:", reason);
-    FaceAI.state.set("FACE_FOUND");
   }
 
   function showCurrentCount() {
@@ -54,12 +63,10 @@ FaceAI.capture = (function () {
     if (!FaceAI.state.is("FACE_READY")) {
       console.warn("Capture aborted: quality dropped at last moment");
       lastCapture = null;
-      FaceAI.state.set("FACE_FOUND");
       return;
     }
 
-    FaceAI.state.set("CAPTURING");
-
+    // Wait a little for countdown overlay to disappear
     await new Promise((resolve) => setTimeout(resolve, 100));
 
     const video = FaceAI.ui.getVideoElement();
@@ -67,7 +74,6 @@ FaceAI.capture = (function () {
     if (!canvas) {
       console.error("Auto capture failed: snapshot returned null");
       lastCapture = null;
-      FaceAI.state.set("FACE_FOUND");
       return;
     }
 
@@ -79,11 +85,68 @@ FaceAI.capture = (function () {
       canvas.height,
     );
 
+    // Stop detection to save resources
     FaceAI.detection.stop();
+
+    // Show preview
     const dataURL = FaceAI.capture.toDataURL(canvas);
     FaceAI.ui.showPreview(dataURL);
     FaceAI.ui.showCaptureButtons();
     FaceAI.state.set("CAPTURED");
+  }
+
+  // ==========================================
+  // State Monitoring
+  // ==========================================
+  function checkState() {
+    const state = FaceAI.state.get();
+    if (state === "FACE_READY") {
+      if (!isCountingDown) {
+        startCountdown();
+      }
+    } else {
+      if (isCountingDown) {
+        cancelCountdown("state changed to " + state);
+      }
+    }
+  }
+
+  // ==========================================
+  // Upload & Report
+  // ==========================================
+  async function onContinue() {
+    const canvas = FaceAI.capture.getLastCapture();
+    if (!canvas) {
+      FaceAI.ui.showError("No captured image found. Please retake.");
+      return;
+    }
+
+    const btn = document.getElementById("continue-btn");
+    if (!btn) return;
+
+    // Prevent double‑submit
+    if (btn.disabled) return;
+
+    // Show spinner
+    btn.innerHTML = '<span class="spinner"></span> Uploading…';
+    btn.disabled = true;
+
+    try {
+      const response = await FaceAI.upload.send(canvas);
+      console.log("Upload successful:", response);
+      FaceAI.ui.showError("");
+      btn.textContent = "Uploaded ✓";
+      FaceAI.state.set("RESULT_READY");
+
+      // Fetch report using the returned filename
+      const filename = response.filename;
+      fetchReport(filename);
+    } catch (error) {
+      console.error("Upload failed:", error.message);
+      FaceAI.ui.showError(error.message);
+      btn.textContent = "Retry Upload";
+      btn.disabled = false;
+    }
   }
 
   async function fetchReport(filename) {
@@ -91,6 +154,7 @@ FaceAI.capture = (function () {
     const content = document.getElementById("report-content");
     if (container && content) {
       container.style.display = "block";
+      container.classList.remove("visible"); // reset fade
       content.innerHTML = '<p class="loading-text">Analyzing…</p>';
     }
 
@@ -161,72 +225,52 @@ FaceAI.capture = (function () {
     }
 
     content.innerHTML = html;
-    container.style.display = "block";
-  }
+    container.classList.add("visible"); // fade in
 
-  function checkState() {
-    const state = FaceAI.state.get();
-    if (state === "FACE_READY") {
-      if (!isCountingDown) {
-        startCountdown();
-      }
+    // Show View History button
+    let viewBtn = document.getElementById("view-history-btn");
+    if (!viewBtn) {
+      viewBtn = document.createElement("button");
+      viewBtn.id = "view-history-btn";
+      viewBtn.className = "btn btn--secondary";
+      viewBtn.textContent = "View History";
+      viewBtn.addEventListener("click", () => {
+        document.getElementById("report-container").style.display = "none";
+        FaceAI.history.show();
+      });
+      container.parentNode.insertBefore(viewBtn, container.nextSibling);
     } else {
-      if (isCountingDown) {
-        cancelCountdown("state changed to " + state);
-      }
+      viewBtn.style.display = "inline-block";
     }
   }
 
+  // ==========================================
+  // Retake
+  // ==========================================
   function onRetake() {
     FaceAI.ui.hidePreview();
     FaceAI.ui.hideCaptureButtons();
+    // Hide report and history
+    const reportContainer = document.getElementById("report-container");
+    if (reportContainer) {
+      reportContainer.style.display = "none";
+      reportContainer.classList.remove("visible");
+    }
+    const viewBtn = document.getElementById("view-history-btn");
+    if (viewBtn) viewBtn.style.display = "none";
+    FaceAI.history.hide();
     document.getElementById("report-container").style.display = "none";
+
     lastCapture = null;
 
     const video = FaceAI.ui.getVideoElement();
     FaceAI.detection.start(video);
     FaceAI.state.set("CAMERA_READY");
-
-    const viewBtn = document.getElementById("view-history-btn");
-    if (viewBtn) viewBtn.style.display = "none";
-    FaceAI.history.hide();
-    document.getElementById("report-container").style.display = "none";
   }
 
-  async function onContinue() {
-    const canvas = FaceAI.capture.getLastCapture();
-    if (!canvas) {
-      FaceAI.ui.showError("No captured image found. Please retake.");
-      return;
-    }
-
-    const btn = document.getElementById("continue-btn");
-    if (!btn) return;
-
-    // Cegah double‑submit
-    if (btn.disabled) return;
-
-    btn.innerHTML = '<span class="spinner"></span> Uploading…';
-    btn.disabled = true;
-
-    try {
-      const response = await FaceAI.upload.send(canvas);
-      console.log("Upload successful:", response);
-      FaceAI.ui.showError("");
-      btn.textContent = "Uploaded ✓";
-      FaceAI.state.set("RESULT_READY");
-
-      // --- Panggil report endpoint menggunakan filename dari response ---
-      const filename = response.filename;
-      fetchReport(filename);
-    } catch (error) {
-      console.error("Upload failed:", error.message);
-      FaceAI.ui.showError(error.message);
-      btn.textContent = "Retry Upload";
-      btn.disabled = false;
-    }
-  }
-
+  // ==========================================
+  // Button Binding
+  // ==========================================
   function bindButtons() {
     const retakeBtn = document.getElementById("retake-btn");
     const continueBtn = document.getElementById("continue-btn");
@@ -234,12 +278,15 @@ FaceAI.capture = (function () {
     if (continueBtn) continueBtn.addEventListener("click", onContinue);
   }
 
+  // ==========================================
+  // Public API
+  // ==========================================
   return {
     init() {
       if (stateWatchInterval) return;
       stateWatchInterval = setInterval(checkState, 200);
       bindButtons();
-      console.log("Capture module initialized (Stage 6.5)");
+      console.log("Capture module initialized (Stage 12.3)");
     },
 
     destroy() {
