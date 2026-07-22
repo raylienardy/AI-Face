@@ -108,11 +108,12 @@ FaceAI.capture = (function () {
 
     let html = `
       <div class="report-overall">
-        <strong>Overall Score: ${data.overall.value.toFixed(1)}</strong> 
-        (confidence: ${(data.overall.confidence * 100).toFixed(0)}%)
+        <span class="report-overall-label">Overall Attractiveness</span>
+        <span class="report-overall-score">${data.overall.value.toFixed(1)}</span>
+        <span class="report-overall-confidence">Confidence ${(data.overall.confidence * 100).toFixed(0)}%</span>
       </div>
+      <div class="report-categories">
     `;
-    // Detail categories (contoh: eyes, nose, dll)
     const categories = [
       { key: "face_structure", label: "Face Structure" },
       { key: "eyes", label: "Eyes" },
@@ -127,50 +128,29 @@ FaceAI.capture = (function () {
       const catData = data[cat.key];
       if (!catData) continue;
       html += `<div class="report-category"><strong>${cat.label}</strong><div class="report-scores">`;
-      // Iterasi properti dalam kategori (kecuali shape yang khusus)
       for (const [prop, val] of Object.entries(catData)) {
-        if (prop === "shape" && cat.key === "face_structure") continue; // shape ditampilkan terpisah
+        if (prop === "shape" && cat.key === "face_structure") continue;
         if (typeof val === "object" && val !== null && "value" in val) {
           html += `<div class="report-score"><span>${prop}</span><span>${val.value.toFixed(1)}</span></div>`;
         }
       }
       html += `</div></div>`;
     }
-    // Strengths & suggestions
+    html += `</div>`; // tutup report-categories
+
     if (data.strengths && data.strengths.length > 0) {
-      html += `<div class="report-strengths"><strong>Strengths:</strong><ul>`;
+      html += `<div class="report-strengths"><strong>Strengths</strong><ul>`;
       data.strengths.forEach((s) => (html += `<li>${s}</li>`));
       html += `</ul></div>`;
     }
     if (data.suggestions && data.suggestions.length > 0) {
-      html += `<div class="report-suggestions"><strong>Suggestions:</strong><ul>`;
+      html += `<div class="report-suggestions"><strong>Suggestions</strong><ul>`;
       data.suggestions.forEach((s) => (html += `<li>${s}</li>`));
       html += `</ul></div>`;
     }
 
     content.innerHTML = html;
     container.style.display = "block";
-
-    // Tampilkan tombol View History
-    const historyActions = document.getElementById("history-actions");
-    if (historyActions) {
-      historyActions.style.display = "block";
-    }
-    // Jika elemen belum ada, kita bisa buat secara dinamis
-    if (!document.getElementById("view-history-btn")) {
-      const btn = document.createElement("button");
-      btn.id = "view-history-btn";
-      btn.className = "btn btn--secondary";
-      btn.textContent = "View History";
-      btn.addEventListener("click", () => {
-        // Sembunyikan report container, tampilkan history panel
-        document.getElementById("report-container").style.display = "none";
-        FaceAI.history.show();
-      });
-      // Tempatkan di bawah report container
-      const container = document.getElementById("report-container");
-      container.parentNode.insertBefore(btn, container.nextSibling);
-    }
   }
 
   function checkState() {
