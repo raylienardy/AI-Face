@@ -1,0 +1,53 @@
+strengths:
+  - category: jaw
+    field: jawline
+    threshold: 80
+    comparison: greater_equal
+    message: "Strong Jawline"
+  - category: face_structure
+    field: harmony
+    threshold: 80
+    comparison: greater_equal
+    message: "Harmonious Facial Proportions"
+  - category: face_structure
+    field: symmetry
+    threshold: 80
+    comparison: greater_equal
+    message: "Symmetric Face"
+  - category: eyes
+    field: symmetry
+    threshold: 85
+    comparison: greater_equal
+    message: "Well-Balanced Eyes"
+  - category: cheek
+    field: cheekbones
+    threshold: 80
+    comparison: greater_equal
+    message: "Prominent Cheekbones"
+
+suggestions:
+  - category: skin
+    field: skin_quality
+    threshold: 50
+    comparison: less_than
+    message: "Consider improving your skincare routine"
+  - category: skin
+    field: skin_texture
+    threshold: 50
+    comparison: less_than
+    message: "Exfoliation may help improve skin texture"
+  - category: jaw
+    field: jawline
+    threshold: 50
+    comparison: less_than
+    message: "Facial exercises could enhance jawline definition"
+  - category: face_structure
+    field: symmetry
+    threshold: 50
+    comparison: less_than
+    message: "Facial yoga might improve symmetry slightly"
+  - category: mouth
+    field: lip_fullness
+    threshold: 50
+    comparison: less_than
+    message: "Hydrating lip care could improve lip fullness"
