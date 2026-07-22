@@ -1,6 +1,7 @@
 import cv2
 from app.services.detector import detector
-
+import sys
+sys.path.insert(0, '.')
 # Baca gambar uji (ganti dengan path gambar wajah)
 image_path = "test.jpg"  # letakkan gambar di folder backend/
 image = cv2.imread(image_path)  # BGR
