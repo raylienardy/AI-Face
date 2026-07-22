@@ -191,6 +191,9 @@ FaceAI.history = (function () {
   function hidePanel() {
     panel.classList.remove("visible");
     panel.style.display = "none";
+    // Bersihkan konten besar untuk mengurangi memori
+    listContainer.innerHTML = "";
+    detailContainer.innerHTML = "";
   }
 
   // ==========================================

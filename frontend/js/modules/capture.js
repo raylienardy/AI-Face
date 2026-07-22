@@ -249,6 +249,11 @@ FaceAI.capture = (function () {
   // ==========================================
   function onRetake() {
     FaceAI.ui.hidePreview();
+    // Bersihkan src preview untuk bebaskan memori
+    const previewImg = document.getElementById("capture-preview");
+    if (previewImg) {
+      previewImg.removeAttribute("src");
+    }
     FaceAI.ui.hideCaptureButtons();
     // Hide report and history
     const reportContainer = document.getElementById("report-container");

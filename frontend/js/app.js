@@ -63,6 +63,14 @@
     FaceAI.capture.destroy();
     FaceAI.detection.stop();
     FaceAI.camera.stop();
+    // Bersihkan canvas dan preview
+    if (FaceAI.drawing) {
+      FaceAI.drawing.clear();
+    }
+    const previewImg = document.getElementById("capture-preview");
+    if (previewImg) {
+      previewImg.removeAttribute("src");
+    }
   }
 
   if (document.readyState === "loading") {

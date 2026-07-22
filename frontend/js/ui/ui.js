@@ -128,6 +128,7 @@ window.FaceAI = window.FaceAI || {};
     hidePreview() {
       const img = document.getElementById("capture-preview");
       if (img) {
+        img.removeAttribute("src"); // bebaskan decoded image
         img.style.display = "none";
         img.classList.remove("visible");
       }
