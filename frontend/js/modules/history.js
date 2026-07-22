@@ -46,7 +46,8 @@ FaceAI.history = (function () {
 
   function renderList(items) {
     if (!items.length) {
-      listContainer.innerHTML = "<p>No analysis history yet.</p>";
+      listContainer.innerHTML =
+        '<div class="empty-state">No analysis history yet.</div>';
       return;
     }
     let html = "";
@@ -152,7 +153,8 @@ FaceAI.history = (function () {
       });
     } catch (err) {
       console.error(err);
-      detailContainer.innerHTML = "<p>Failed to load detail.</p>";
+      detailContainer.innerHTML =
+        '<p class="loading-text">Failed to load detail. The analysis may have been deleted or the server is unreachable.</p>';
       detailContainer.style.display = "block";
       listContainer.style.display = "none";
     }

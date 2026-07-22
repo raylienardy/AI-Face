@@ -87,6 +87,13 @@ FaceAI.capture = (function () {
   }
 
   async function fetchReport(filename) {
+    const container = document.getElementById("report-container");
+    const content = document.getElementById("report-content");
+    if (container && content) {
+      container.style.display = "block";
+      content.innerHTML = '<p class="loading-text">Analyzing…</p>';
+    }
+
     const reportUrl = `http://localhost:8000/api/report?file=${encodeURIComponent(filename)}`;
     try {
       const res = await fetch(reportUrl);
@@ -97,6 +104,10 @@ FaceAI.capture = (function () {
       displayReport(reportData);
     } catch (err) {
       console.error("Failed to fetch report:", err);
+      if (content) {
+        content.innerHTML =
+          '<p class="loading-text">Failed to load report. Please try again.</p>';
+      }
       FaceAI.ui.showError("Failed to load analysis report.");
     }
   }
@@ -195,7 +206,7 @@ FaceAI.capture = (function () {
     // Cegah double‑submit
     if (btn.disabled) return;
 
-    btn.textContent = "Uploading…";
+    btn.innerHTML = '<span class="spinner"></span> Uploading…';
     btn.disabled = true;
 
     try {
