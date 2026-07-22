@@ -73,3 +73,6 @@ class Report(BaseModel):
     overall: FeatureScore
     strengths: List[str] = Field(default_factory=list, description="Daftar kekuatan (belum diisi sebelum Stage 10.2)")
     suggestions: List[str] = Field(default_factory=list, description="Daftar saran perbaikan (belum diisi sebelum Stage 10.2)")
+
+class ReportResponse(Report):
+    analysis_id: str

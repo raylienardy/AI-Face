@@ -16,3 +16,7 @@ DETECTION_CONFIDENCE_THRESHOLD = 0.5
 PREPROCESS_TARGET_SIZE = (224, 224)       # width, height
 PREPROCESS_NORMALIZATION_MODE = "base"    # "base", "vggface", "facenet"
 PREPROCESS_OUTPUT_DIR = "processed"
+
+# Model & Pipeline versioning (Stage 11.2)
+MODEL_VERSION = "insightface-buffalo_l-v1"
+PREPROCESSING_VERSION = "align-eyes-letterbox-224-v1"

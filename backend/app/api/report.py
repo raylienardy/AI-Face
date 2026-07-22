@@ -8,11 +8,13 @@ from app.services.region_analyzer import analyze_eyes, analyze_eyebrows, analyze
 from app.services.skin_analyzer import analyze_skin
 from app.services.aggregator import aggregate_scores
 from app.services.report_builder import generate_strengths_suggestions
+from app.services.history_service import HistoryService
 from app.schemas.report import (
     Report, FeatureScore, FaceStructure, ShapeScores,
     EyesReport, EyebrowsReport, NoseReport, MouthReport,
-    JawReport, CheekReport, SkinReport
+    JawReport, CheekReport, SkinReport, ReportResponse
 )
+from app.core import config
 
 logger = logging.getLogger("faceai.api.report")
 router = APIRouter(prefix="/api")
@@ -33,6 +35,10 @@ def _num(value, default=50.0):
         return default
 
 def generate_report_from_file(file_path: str) -> Report:
+    """
+    Membaca gambar dari disk, menjalankan seluruh pipeline analisis,
+    dan mengembalikan objek Report lengkap.
+    """
     img = cv2.imread(file_path)
     if img is None:
         raise HTTPException(400, "Cannot read image file")
@@ -112,23 +118,29 @@ def generate_report_from_file(file_path: str) -> Report:
 
     # Strengths & suggestions
     score_dict = {
-        "face_structure": {"symmetry": report.face_structure.symmetry.value, "harmony": report.face_structure.harmony.value},
+        "face_structure": {
+            "symmetry": report.face_structure.symmetry.value,
+            "harmony": report.face_structure.harmony.value
+        },
         "eyes": {"symmetry": report.eyes.symmetry.value},
         "eyebrows": {"symmetry": report.eyebrows.symmetry.value},
         "mouth": {"lip_fullness": report.mouth.lip_fullness.value},
         "jaw": {"jawline": report.jaw.jawline.value},
         "cheek": {"cheekbones": report.cheek.cheekbones.value},
-        "skin": {"skin_quality": report.skin.skin_quality.value, "skin_texture": report.skin.skin_texture.value, "skin_tone": report.skin.skin_tone.value}
+        "skin": {
+            "skin_quality": report.skin.skin_quality.value,
+            "skin_texture": report.skin.skin_texture.value,
+            "skin_tone": report.skin.skin_tone.value
+        }
     }
-    # tambahkan field lain
-    for cat in ["eyes","eyebrows","nose","mouth","jaw","cheek"]:
+    for cat in ["eyes", "eyebrows", "nose", "mouth", "jaw", "cheek"]:
         if cat in regions and "error" not in regions[cat]:
-            for k,v in regions[cat].items():
-                if isinstance(v, (int,float)):
+            for k, v in regions[cat].items():
+                if isinstance(v, (int, float)):
                     score_dict.setdefault(cat, {})[k] = v
     if "error" not in skin:
-        for k,v in skin.items():
-            if isinstance(v, (int,float)):
+        for k, v in skin.items():
+            if isinstance(v, (int, float)):
                 score_dict["skin"][k] = v
 
     strengths, suggestions = generate_strengths_suggestions(score_dict)
@@ -136,14 +148,35 @@ def generate_report_from_file(file_path: str) -> Report:
     report.suggestions = suggestions
     return report
 
-@router.get("/report", response_model=Report)
+
+@router.get("/report", response_model=ReportResponse)
 async def get_report(file: str = Query(..., description="Filename hasil upload")):
+    """
+    Menghasilkan laporan analisis kecantikan untuk file yang sudah diunggah.
+    Menyimpan laporan ke history secara otomatis.
+    """
     file_path = os.path.join(UPLOAD_DIR, file)
     if not os.path.exists(file_path):
         raise HTTPException(404, f"File '{file}' tidak ditemukan di server")
+
     try:
         report = generate_report_from_file(file_path)
-        return report
+
+        # Simpan ke history
+        history_service = HistoryService()
+        analysis_id = history_service.create(
+            image_path=file_path,
+            report=report,
+            model_version=config.MODEL_VERSION,
+            preprocessing_version=config.PREPROCESSING_VERSION
+        )
+
+        response = ReportResponse(
+            **report.model_dump(),
+            analysis_id=analysis_id
+        )
+        return response
+
     except HTTPException:
         raise
     except Exception as e:
