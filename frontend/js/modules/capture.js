@@ -117,25 +117,27 @@ FaceAI.capture = (function () {
     }
 
     const btn = document.getElementById("continue-btn");
-    if (btn) {
-      btn.textContent = "Uploading…";
-      btn.disabled = true;
-    }
+    if (!btn) return;
+
+    // Cegah double‑submit
+    if (btn.disabled) return;
+
+    // Tampilkan status uploading
+    btn.textContent = "Uploading…";
+    btn.disabled = true;
 
     try {
       const response = await FaceAI.upload.send(canvas);
       console.log("Upload successful:", response);
-      FaceAI.ui.showError("");
-      if (btn) {
-        btn.textContent = "Upload Successful";
-      }
+      FaceAI.ui.showError(""); // hapus error sebelumnya
+      btn.textContent = "Uploaded ✓";
+      // Tombol tetap disabled, tidak bisa diklik lagi
+      FaceAI.state.set("RESULT_READY"); // siap untuk langkah berikutnya (analisis)
     } catch (error) {
       console.error("Upload failed:", error.message);
       FaceAI.ui.showError(error.message);
-      if (btn) {
-        btn.textContent = "Retry Upload";
-        btn.disabled = false;
-      }
+      btn.textContent = "Retry Upload";
+      btn.disabled = false; // izinkan retry
     }
   }
 

@@ -121,6 +121,10 @@ window.FaceAI = window.FaceAI || {};
       if (btns) btns.style.display = "none";
     },
 
+    setButtonText(buttonId, text) {
+      const btn = document.getElementById(buttonId);
+      if (btn) btn.textContent = text;
+    },
     // Private helper
     _updateDot(element, active) {
       if (!element) return;

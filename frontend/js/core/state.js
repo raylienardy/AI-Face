@@ -19,9 +19,10 @@ FaceAI.state = (function () {
     "DETECTING",
     "FACE_FOUND",
     "FACE_READY",
-    "COUNTDOWN", // ← baru
-    "CAPTURING", // ← baru
-    "CAPTURED", // pastikan ada
+    "COUNTDOWN",
+    "CAPTURING",
+    "CAPTURED",
+    "RESULT_READY", // ← baru (upload berhasil, siap menuju analisis)
     "RECOGNIZED",
   ];
 
