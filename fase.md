@@ -1,4 +1,4 @@
-# Laporan Perancangan Milestone 9 — AI Face Analysis
+# Dokumen Desain Teknis Milestone 10 — AI Report Generator
 
 **Versi:** 1.0  
 **Status:** Draft untuk persetujuan Founder  
@@ -6,324 +6,358 @@
 
 ---
 
-## Step 1 — Recall Knowledge dari Empat Repositori
+## Langkah 1 — Insight dari Empat Repositori yang Relevan untuk Report Generator
 
 ### Facial Beauty Prediction
 
-- **Tujuan:** Memprediksi skor kecantikan (1–5) dengan distribusi opini, bukan sekadar rata‑rata.
-- **Arsitektur:** NIMA (Neural Image Assessment) dengan backbone SqueezeNet1.1 pretrained ImageNet, head softmax 5 kelas.
-- **Target:** Distribusi probabilitas rating dari 60 penilai per gambar.
-- **Loss:** Earth Mover Distance (EMD) – menghukum kesalahan prediksi dengan mempertimbangkan urutan kelas (skor 4 ke 5 lebih baik daripada 4 ke 1).
-- **Inferensi:** Skor akhir dihitung sebagai expected value dari distribusi prediksi.
-- **Preprocessing:** Inkonsistensi (tanpa normalisasi ImageNet). Ini harus dihindari di FaceAI.
-- **Pelajaran yang diadopsi:**
-  - Menggunakan distribusi opini memberikan gradien yang lebih halus dan menghasilkan korelasi Pearson tinggi.
-  - Backbone pretrained mempercepat konvergensi dan meningkatkan generalisasi.
-  - Konsistensi preprocessing wajib.
+- **Distribusi skor, bukan sekadar rata-rata:** Model memberikan distribusi probabilitas rating (1–5). Insight penting: laporan bisa menampilkan _keyakinan_ dengan distribusi, bukan hanya satu angka. Untuk FaceAI, meskipun kita tidak menggunakan EMD loss saat ini, konsep ini menginspirasi agar setiap skor disertai **rentang keyakinan**.
+- **Expected value sebagai skor akhir:** Laporan harus mudah dibaca; satu angka utama tetap penting. Namun kita bisa tambahkan _confidence band_.
+- **Pemisahan inferensi & presentasi:** Repo ini menampilkan skor numerik. Tidak ada laporan naratif. Maka kita harus membangun lapisan presentasi yang benar-benar terpisah.
 
-### face‑rating
+### face-rating
 
-- **Pendekatan ganda:** ML tradisional dengan fitur geometris (11.628 rasio landmark) + PCA → SVR; CNN regresi dari awal.
-- **Fitur geometris:** Menangkap proporsi wajah klasik (simetri, golden ratio). Sangat interpretabel.
-- **Kelemahan CNN:** Tanpa pretrained backbone dan augmentasi minim, akurasi terbatas.
-- **Pelajaran yang diadopsi:**
-  - Fitur geometris bisa menjadi input komplementer untuk analisis struktur wajah.
-  - Landmark yang presisi adalah syarat mutlak.
-  - CNN dari awal tidak cocok untuk dataset kecil; transfer learning lebih baik.
+- **Banyak fitur terpisah:** Geometri, landmark, rasio. Setiap fitur bisa diberi skor sendiri-sendiri. Ini sesuai dengan FaceAI yang menghasilkan skor per region.
+- **Interpretabilitas fitur geometris:** Karena fitur geometris mudah dijelaskan (mis. "lebar hidung vs lebar wajah"), laporan bisa menyertakan penjelasan singkat untuk setiap skor. Ini menjadikan laporan lebih transparan.
+- **Kelemahan:** Tidak ada mekanisme otomatis mengubah fitur geometris menjadi saran perbaikan. Itu harus kita rancang secara terpisah.
 
 ### MEBeauty
 
-- **Dataset:** Multi‑etnis (2550 gambar), skor personal & generik, crop & alignment wajah (DeepFace).
-- **Pipeline:** Preprocessing ketat (alignment → resize 224×224, normalisasi [-1,1]) → backbone pretrained (VGG16, DenseNet, dll.) dengan feature extractor dibekukan → MLP regresi (4096→4096→1) + dropout 0.5, dilatih dengan MSE.
-- **Shallow features:** Eigenface, Gabor, HOG, geometris → SVR. FaceNet embedding juga dieksplorasi.
-- **Pelajaran:**
-  - Alignment yang tepat dan preprocessing konsisten adalah kunci.
-  - Backbone pretrained + MLP sederhana sudah memberikan hasil baik.
-  - Multi‑ethnic dataset penting untuk generalisasi.
-  - **Inkonsistensi normalisasi** (training [-1,1], inference tanpa normalisasi) menyebabkan prediksi melenceng. Harus dihindari.
+- **Preprocessing konsisten = confidence lebih tinggi:** Laporan harus mencantumkan informasi kualitas input? Tidak perlu, karena kualitas sudah dijamin oleh Milestone 5. Namun, jika preprocessing gagal, backend akan menolak gambar. Jadi confidence laporan berasal dari confidence model, bukan dari preprocessing.
+- **Multi-etnis:** Hasil analisis mungkin sensitif terhadap etnis. Di masa depan, laporan bisa disesuaikan. Untuk v1, kita tidak perlu, tetapi arsitektur harus mendukung penambahan konteks demografis (dari DeepFace) jika diperlukan nanti.
 
 ### DeepFace
 
-- **Pipeline standar:** Detect → Align → Normalize → Represent → Verify/Analyze.
-- **Represent:** Face embedding dari model recognition (VGG‑Face, Facenet, ArcFace, dll.). Embedding 4096‑d (VGG‑Face) atau 128‑d (Facenet) digunakan sebagai fitur generik wajah.
-- **Attribute analysis:** Model demography (Age, Gender, Race) menggunakan backbone VGG‑Face + head minimal, dilatih secara terpisah.
-- **Threshold & confidence:** Pre‑tuned per model dan metrik, dengan regresi logistik untuk confidence calibration.
-- **Kelebihan arsitektur:** Setiap tahap berdiri sendiri, model dapat diganti tanpa merusak yang lain, cocok untuk produksi.
-- **Pelajaran utama untuk FaceAI:**
-  - Gunakan embedding sebagai representasi wajah yang kaya.
-  - Bangun head terpisah untuk tiap atribut (multi‑head).
-  - Preprocessing harus identik dengan training.
-  - Modularitas memungkinkan penambahan atribut baru tanpa menyentuh pipeline inti.
+- **Representasi hasil terstruktur:** DeepFace mengembalikan dictionary dengan key yang jelas (age, gender, race, emotion, embedding). Laporan harus mengambil struktur serupa: output Milestone 9 adalah dictionary besar, dan report generator membaca dictionary itu.
+- **Confidence & threshold:** DeepFace memiliki threshold per model. Untuk laporan, setiap skor harus memiliki confidence. Kita sudah punya confidence placeholder; kita bisa menampilkannya sebagai "accuracy indicator".
+- **Modularitas:** Setiap atribut dianalisis terpisah, sehingga laporan bisa menampilkan per kategori tanpa saling ketergantungan. Ini memungkinkan kita menambah/ mengurangi kategori tanpa mengubah format laporan secara keseluruhan.
 
 ---
 
-## Step 2 — Ingat Tujuan FaceAI
+## Langkah 2 — Evaluasi Milestone 10
 
-Frontend hanya bertugas menangkap foto terbaik. Backend-lah yang melakukan seluruh analisis AI. Oleh karena itu, Milestone 9 harus menghasilkan **beberapa skor independen per aspek wajah**, bukan hanya satu angka. Aspek yang dianalisis meliputi: struktur wajah, mata, alis, hidung, bibir, rahang, pipi, kulit, rambut, dan overall attractiveness. Semua skor akan dihitung di backend, dan frontend hanya menerima JSON hasil akhir.
+### 1. Apakah objective milestone ini sudah benar?
 
----
+**Ya.** "Mengubah hasil AI menjadi laporan yang mudah dipahami" adalah deskripsi tepat untuk presentation layer. Objective tidak menyebutkan perhitungan ulang, hanya transformasi data → informasi → laporan.
 
-## Step 3 — Evaluasi Milestone 9
+### 2. Apakah urutannya sudah tepat?
 
-Pembagian modul AI saat ini sudah baik karena memisahkan perhatian berdasarkan region wajah. Namun perlu beberapa penyesuaian:
+**Ya.** Setelah analisis AI (M9), laporan dibangun (M10) lalu ditampilkan (M10 bagian frontend). Urutan sesuai pipeline.
 
-- **Modul "Hair" (rambut)** sebaiknya **ditunda ke versi berikutnya**. Analisis rambut memerlukan segmentasi khusus dan dataset yang berbeda. Untuk v1.0, fokus pada fitur wajah internal.
-- **"Overall Attractiveness"** bukanlah modul terpisah, melainkan **agregasi terboboti** dari skor‑skor lainnya, atau bisa juga menggunakan model NIMA terpisah yang dilatih pada dataset kecantikan umum. Akan tetapi, untuk memulai, pendekatan agregasi lebih sederhana dan dapat dijelaskan.
-- **Confidence score**: Setiap prediksi harus disertai confidence yang mencerminkan seberapa yakin model terhadap hasilnya (misal dari variance prediksi, atau dari probabilitas softmax).
-- Modul‑modul yang ada dapat dikelompokkan menjadi 3 kategori besar:
-  1. **Struktur & Harmoni Wajah** (Face Shape, Facial Harmony, Symmetry) – sangat bergantung pada landmark.
-  2. **Fitur Wajah** (Eyes, Eyebrows, Nose, Lips, Jaw, Cheek) – bisa menggunakan patch CNN.
-  3. **Kulit** (Skin Quality, Texture, Tone) – memerlukan analisis patch kulit dari area pipi/dahi.
-- Modul "Skin" perlu preprocessing tambahan: crop area pipi atau dahi, konversi ke color space tertentu, dan mungkin analisis frekuensi untuk tekstur.
+### 3. Apakah ada bagian yang masih kurang?
 
----
+- **Interpretasi strengths & improvement suggestions:** Menerjemahkan skor numerik menjadi teks naratif (misal "Strong jawline") memerlukan aturan. Saat ini hanya disebutkan sebagai output, tetapi belum ada mekanisme. Perlu modul khusus (rule engine) atau template.
+- **Confidence:** Sudah ada di output analisis, tetapi belum dijelaskan bagaimana ditampilkan (misal: "Confidence: 88%" atau "High confidence").
+- **Format output:** Apakah laporan berupa JSON, HTML, atau teks? Untuk frontend, sebaiknya JSON terstruktur yang bisa dirender oleh UI. Jadi kita perlu definisi skema respons.
+- **Lokalisasi:** Tidak disebutkan, tapi untuk v1 bisa diabaikan.
 
-## Step 4 — Review AI Architecture
+### 4. Apakah ada bagian yang terlalu cepat?
 
-Beberapa pendekatan yang dipertimbangkan:
+**Tidak.** Milestone ini tepat setelah AI selesai. Tidak ada yang prematur.
 
-| Pendekatan                                     | Kelebihan                                                                                   | Kekurangan                                                               | Cocok untuk FaceAI?  |
-| ---------------------------------------------- | ------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------ | -------------------- |
-| **Satu model besar multi‑output**              | Simpel, satu kali inferensi                                                                 | Sulit di-debug, tidak modular, perlu dataset besar dengan label lengkap  | ❌                   |
-| **Satu model per kategori (10+ model)**        | Sangat modular, bisa dilatih independen                                                     | Beban komputasi tinggi, manajemen model rumit                            | ❌                   |
-| **Hybrid: backbone bersama + multi‑head**      | Modular, efisien (satu forward backbone), mudah menambah atribut                            | Perlu fine‑tuning hati‑hati agar head tidak saling mengganggu            | ✅                   |
-| **Landmark + aturan geometris**                | Cepat, interpretabel                                                                        | Tidak menangkap tekstur/kulit, memerlukan definisi aturan yang subjektif | Sebagai tambahan     |
-| **Embedding (FaceNet/ArcFace) + MLP terpisah** | Modular, memanfaatkan representasi wajah yang kaya, sudah terbukti di MEBeauty dan DeepFace | Memerlukan embedding yang baik, ukuran model sedang                      | ✅ **Pilihan utama** |
+### 5. Apakah ada bagian yang seharusnya dipindahkan ke milestone lain?
 
-**Rekomendasi:**  
-Gunakan **backbone bersama** (misalnya InsightFace buffalo_l recognition model, yang menghasilkan embedding 512‑d) yang sudah dilatih pada tugas face recognition. Backbone ini menghasilkan representasi wajah yang sangat diskriminatif. Kemudian, bangun **head terpisah** untuk setiap kelompok atribut:
+**Tidak.** Semua deliverables (overall score, feature scores, strengths, suggestions, confidence) adalah tanggung jawab report generator. Namun, "Strengths & Improvement Suggestions" memerlukan aturan yang bisa sangat kompleks. Untuk mencegah over-engineering, kita bisa membuatnya berbasis threshold sederhana di M10, lalu ditingkatkan di milestone berikutnya (M12 UI/Performance).
 
-- **Geometry head:** Menerima landmark dan embedding → memprediksi skor struktur wajah (shape, harmony, symmetry).
-- **Region heads:** Menerima patch gambar yang di‑crop berdasarkan landmark (mata, hidung, bibir, dll.) + embedding → memprediksi skor fitur spesifik.
-- **Skin head:** Menerima patch kulit (pipi) + embedding → memprediksi skor kualitas kulit.
-- **Overall head:** Menerima embedding dan/atau agregasi skor lain → memprediksi overall attractiveness.
+### 6. Apakah desain ini sudah sesuai dengan hasil pembelajaran dari keempat repository?
 
-Keuntungan arsitektur ini:
-
-- **Modular:** Setiap head bisa dilatih secara terpisah, dengan dataset yang berbeda.
-- **Efisien:** Backbone hanya dijalankan sekali.
-- **Mudah di-debug:** Jika skor mata tidak masuk akal, kita hanya perlu memeriksa head mata.
-- **Production‑ready:** Mirip dengan pendekatan DeepFace untuk atribut.
+**Ya.** Desain ini memisahkan inference (M9) dari presentasi (M10). Mengadopsi struktur modular seperti DeepFace: output M9 adalah dictionary yang kaya, lalu M10 membacanya dan menghasilkan laporan. Confidence dari setiap skor ditampilkan. Saran perbaikan dapat dihasilkan oleh rule engine yang meniru interpretasi geometris face-rating.
 
 ---
 
-## Step 5 — Review Setiap AI Module
+## Langkah 3 — Rekomendasi Perbaikan (Tanpa Kode)
 
-| Modul                                         | Keputusan                               | Alasan                                                                                                                                                                             |
-| --------------------------------------------- | --------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Face Structure (Shape, Harmony, Symmetry)** | Gabung dalam satu "Geometry Analyzer"   | Ketiganya sangat bergantung pada landmark dan proporsi wajah. Bisa dihitung dengan aturan geometris dan/atau regresi dari embedding.                                               |
-| **Eyes (Shape, Spacing, Size)**               | Modul "Eye Analyzer"                    | Membutuhkan crop area mata dari landmark. Bisa menggunakan CNN kecil (misal MobileNet) yang dilatih pada dataset atribut mata.                                                     |
-| **Eyebrows (Shape, Thickness, Position)**     | Gabung dengan Eye Analyzer? Atau pisah? | Alis dekat dengan mata, bisa di-crop bersama mata. Namun jika ingin analisis lebih detail, bisa dibuat head sendiri. Awalnya bisa digabung.                                        |
-| **Nose (Width, Length, Balance)**             | Modul "Nose Analyzer"                   | Crop area hidung dari landmark.                                                                                                                                                    |
-| **Lips (Shape, Fullness, Symmetry)**          | Modul "Mouth Analyzer"                  | Crop area mulut.                                                                                                                                                                   |
-| **Jaw & Chin**                                | Gabung dalam "Jaw Analyzer"             | Crop area rahang; mungkin butuh landmark kontur wajah. InsightFace menyediakan 106 landmark, termasuk rahang.                                                                      |
-| **Cheek (Cheekbones, Midface)**               | Modul "Cheek Analyzer"                  | Crop area pipi.                                                                                                                                                                    |
-| **Skin (Quality, Texture, Tone)**             | Modul "Skin Analyzer"                   | Crop patch dari area pipi atau dahi yang bebas dari bayangan. Memerlukan preprocessing khusus (color space, filter). Bisa menggunakan CNN atau model klasik (GLCM, LBP) + regresi. |
-| **Hair**                                      | **Tunda ke Milestone >10**              | Tidak kritikal untuk v1.0. Memerlukan segmentasi rambut.                                                                                                                           |
-| **Overall Attractiveness**                    | Modul agregasi + opsional NIMA          | Hitung rata‑rata terboboti dari semua skor, dengan bobot yang bisa disetel. Atau gunakan model NIMA terpisah yang dilatih pada dataset kecantikan untuk memberikan skor holistic.  |
+1. **Definisikan skema input/output yang ketat.**  
+   Input ke Report Generator adalah dictionary hasil Milestone 9. Output adalah dictionary laporan yang siap dikirim ke frontend.
 
-**Catatan:**
+2. **Buat aturan sederhana untuk Strengths & Suggestions.**  
+   Contoh: Jika `jawline > 80`, tambahkan ke strengths "Strong Jawline". Jika `skin_quality < 40`, suggestion "Improve skincare". Aturan disimpan di file konfigurasi terpisah agar mudah diubah tanpa menyentuh kode inti.
 
-- Semua head regresi akan menghasilkan skor numerik (misal 0–100).
-- Confidence score dapat dihitung dari variance prediksi (jika kita menggunakan ensemble) atau dari probabilitas softmax jika head menggunakan klasifikasi ordinal.
-- Preprocessing untuk setiap head harus konsisten dengan training (ukuran crop, normalisasi).
+3. **Gunakan template string untuk narasi.**  
+   Untuk menghindari hardcode teks di kode, gunakan template yang menerima nama kategori dan skor.
+
+4. **Confidence setiap skor dihitung di M9, bukan M10.**  
+   M10 hanya meneruskan confidence yang sudah ada. Jika belum ada (placeholder), kita siapkan field kosong atau default.
+
+5. **Pisahkan Report Generator menjadi dua sub-layer:**
+   - **Content builder:** Menyusun struktur laporan (aggregasi skor, pemilihan strengths/suggestions).
+   - **Formatter:** Mengubah struktur tersebut menjadi format tertentu (JSON untuk API, nanti bisa HTML/PDF). Untuk sekarang, JSON formatter.
 
 ---
 
-## Step 6 — Pecah Menjadi Stage
+## Langkah 4 — Pemecahan Milestone 10 Menjadi Stage Kecil
 
-### Stage 9.1 — Face Embedding Service
+### Stage 10.1 — Report Schema & Data Contract
 
-**Objective:** Menyediakan modul yang menghasilkan embedding wajah (vector representasi) dari gambar yang sudah di-preprocess. Embedding ini akan digunakan oleh semua head analisis.
+**Objective:**  
+Mendefinisikan skema input (dari Milestone 9) dan skema output (laporan) yang akan digunakan oleh frontend. Menjamin konsistensi data.
+
+**Mengapa stage ini diperlukan:**  
+Tanpa kontrak data yang jelas, integrasi antara backend dan frontend akan rapuh. Skema juga menjadi dokumentasi hidup.
+
+**Input:**  
+Hasil analisis dari Milestone 9 dalam bentuk dictionary (contoh: `face_structure`, `eyes`, `skin`, dll).
+
+**Process:**
+
+- Definisikan kelas Pydantic atau JSON Schema untuk:
+  - `AnalysisResult` (input)
+  - `Report` (output)
+- Diskusikan dengan frontend (jika ada) struktur yang diinginkan.
+- Simpan sebagai `backend/app/schemas/report.py` atau cukup sebagai definisi model di `analysis.py`.
+
+**Output:**  
+File skema yang mendokumentasikan kontrak. Belum ada implementasi logika.
 
 **Deliverables:**
 
-- Modul `backend/app/services/embedder.py` yang memanfaatkan model recognition InsightFace (ArcFace/w600k_r50) untuk mengekstrak embedding 512‑d.
-- Cache embedding di memori untuk menghindari ekstraksi ulang.
-- Fungsi `extract_embedding(aligned_face) -> np.ndarray`.
+- `backend/app/schemas/report.py` dengan model Pydantic: `FeatureScore`, `CategoryReport`, `Report`.
+- Konfirmasi bahwa skema ini cocok untuk frontend.
 
-**Files:**
+**Dependency:**  
+Tidak ada. Dapat dilakukan paralel dengan M9.
 
-- `backend/app/services/embedder.py`
-- (Opsional) konfigurasi model embedding di `config.py`.
+**Definition of Done:**  
+Skema Pydantic terdefinisi dan lulus validasi JSON.
 
-**Output:** Panggil fungsi dengan gambar hasil alignment → dapatkan vector 512‑d.
+**Testing Checklist:**
 
-**Testing:**
+- Buat instance model dengan data dummy, pastikan serialisasi berhasil.
+- Uji edge case: field kosong, skor di luar rentang.
 
-- Berikan dua gambar orang yang sama → embedding memiliki cosine similarity > 0.5.
-- Berikan dua gambar orang berbeda → similarity rendah.
+**Risiko:**  
+Perubahan skema di kemudian hari; mitigasi dengan versioning (misal `v1/report`).
 
-**Dependency:** Membutuhkan Stage 8.5 (gambar ter‑preprocess).
+**Catatan Engineering:**  
+Gunakan Pydantic untuk validasi otomatis. Hindari coupling dengan logika bisnis.
 
 ---
 
-### Stage 9.2 — Landmark Extraction & Geometry Analyzer
+### Stage 10.2 — Content Builder (Strengths & Suggestions Engine)
 
-**Objective:** Mengekstrak 106‑titik landmark (dari InsightFace) dan menghitung fitur geometris dasar (simetri, rasio, shape) yang menghasilkan skor struktur wajah.
+**Objective:**  
+Membangun modul yang menerjemahkan skor numerik menjadi daftar kekuatan dan saran perbaikan.
+
+**Mengapa stage ini diperlukan:**  
+Ini adalah inti dari "laporan yang mudah dipahami". Tanpa ini, laporan hanya sekumpulan angka.
+
+**Input:**  
+Dictionary skor dari M9 (misal: `jawline: 85`, `skin_quality: 35`).
+
+**Process:**
+
+- Buat file konfigurasi `backend/app/config/report_rules.yaml` yang berisi aturan:
+  ```yaml
+  strengths:
+    - category: jaw
+      field: jawline
+      threshold: 80
+      message: "Strong Jawline"
+    - category: geometry
+      field: symmetry
+      threshold: 80
+      message: "Symmetric Face"
+  suggestions:
+    - category: skin
+      field: skin_quality
+      threshold: 40
+      comparison: less_than
+      message: "Consider improving skin care routine"
+  ```
+- Implementasikan `backend/app/services/report_builder.py` dengan fungsi `generate_strengths_suggestions(scores)` yang membaca YAML dan mengembalikan dua list.
+- Jika tidak ada aturan yang terpicu, kembalikan list kosong.
+
+**Output:**  
+Dua list: `strengths: ["Strong Jawline", ...]`, `suggestions: [...]`.
 
 **Deliverables:**
 
-- Modul `backend/app/services/landmark_extractor.py` untuk mendapatkan 106 landmark.
-- Modul `backend/app/services/geometry_analyzer.py` yang menghitung:
-  - Face Shape (oval, round, square, dll.) → klasifikasi atau skor untuk tiap bentuk.
-  - Facial Symmetry index (berdasarkan perbedaan sisi kiri‑kanan).
-  - Facial Harmony score (berdasarkan golden ratio dan proporsi).
-- Rule‑based atau model regresi sederhana (Linear Regression) yang dilatih pada dataset kecil berlabel.
+- `backend/app/config/report_rules.yaml`
+- `backend/app/services/report_builder.py`
 
-**Files:**
+**Dependency:**  
+Stage 10.1 (skema input) untuk memastikan format data yang diterima.
 
-- `backend/app/services/landmark_extractor.py`
-- `backend/app/services/geometry_analyzer.py`
-- Model atau koefisien regresi disimpan di `backend/models/geometry/`.
+**Definition of Done:**
 
-**Output:** Skor numerik untuk face shape, harmony, symmetry.
+- Untuk input dummy dengan `jawline=85`, output mengandung `"Strong Jawline"`.
+- Untuk input di bawah threshold, tidak ada.
+- YAML dapat diubah tanpa restart server (reload otomatis atau manual).
 
-**Testing:**
+**Testing Checklist:**
 
-- Wajah simetris → symmetry > 80.
-- Wajah asimetris (misal satu mata lebih tinggi) → symmetry < 60.
+- Uji dengan berbagai kombinasi skor.
+- Uji jika file YAML hilang atau format salah → gunakan default kosong.
+- Uji threshold tepat di batas.
 
-**Dependency:** Stage 9.1 (embedding mungkin diperlukan untuk prediksi, atau cukup landmark saja). Landmark sudah tersedia dari detector, tapi kita bisa ekstrak ulang dari gambar aligned.
+**Risiko:**  
+Aturan terlalu kaku; iterasi berikutnya bisa menggunakan fuzzy logic. Untuk v1, aturan eksplisit sudah cukup.
+
+**Catatan Engineering:**  
+Gunakan library `pyyaml` (tambah ke requirements). Cache aturan di memori, refresh saat file berubah (atau saat request untuk kesederhanaan).
 
 ---
 
-### Stage 9.3 — Region Analyzers (Eyes, Nose, Mouth, Jaw, Cheek)
+### Stage 10.3 — Report Aggregation & Generation Endpoint
 
-**Objective:** Melatih atau menggunakan model pretrained untuk menganalisis fitur spesifik wajah berdasarkan patch yang di‑crop.
+**Objective:**  
+Mengintegrasikan content builder dengan hasil analisis, menghasilkan laporan lengkap dalam format JSON melalui endpoint API.
+
+**Mengapa stage ini diperlukan:**  
+Ini menghubungkan output M9 menjadi respons API yang siap dikonsumsi frontend.
+
+**Input:**
+
+- Data dari Milestone 9 (bisa didapat dari penyimpanan sementara atau dari request ulang). Untuk saat ini, kita akan membuat endpoint `/api/report` yang menerima hasil analisis sebagai input, atau menggabungkannya dengan `/api/analyze`.  
+  Karena M9 sudah memiliki endpoint `/api/analyze` yang mengembalikan skor, kita akan **memperluas** endpoint tersebut (atau membuat baru) untuk juga menghasilkan laporan. Untuk menghindari overhead, kita bisa menambahkan query parameter `?format=report` di `/api/analyze` yang setelah analisis selesai langsung memanggil report builder.  
+  **Keputusan:** Buat endpoint `/api/report` terpisah yang menerima `analysis_id` (jika hasil disimpan) atau langsung menerima JSON hasil analisis. Untuk MVP, kita akan membuat endpoint `/api/analyze` yang diperkaya: response-nya sudah termasuk laporan. Jadi tidak ada endpoint baru, hanya penambahan di logic `/api/analyze`.
+
+**Process:**
+
+- Di `backend/app/api/analysis.py`, setelah mendapatkan `overall` dan skor lainnya, panggil `generate_strengths_suggestions(scores)`.
+- Gabungkan semua ke dalam struktur `Report` sesuai skema.
+- Kembalikan sebagai bagian dari response.
+
+**Output:**  
+JSON yang berisi `face_structure`, `eyes`, ..., `overall`, `strengths`, `suggestions`, `confidence`.
 
 **Deliverables:**
 
-- Modul `backend/app/services/region_analyzer.py` yang berisi kelas untuk setiap region.
-- Setiap region analyzer:
-  1. Crop patch sesuai landmark.
-  2. Resize ke ukuran tetap (misal 64×64).
-  3. Forward melalui CNN kecil (misal MobileNetV2 pretrained + head regresi) untuk menghasilkan skor.
-- Model akan dilatih di luar pipeline (persiapan dataset di milestone terpisah) dan bobotnya disimpan di `backend/models/regions/`.
-- Untuk MVP, kita bisa menggunakan **model dummy** (random score) sebagai placeholder, dan mengembangkannya nanti.
+- Modifikasi `backend/app/api/analysis.py` (atau file terpisah `report.py`).
+- Pastikan response model mengikuti `Report` schema.
 
-**Files:**
+**Dependency:**  
+Stage 10.1 (skema) dan Stage 10.2 (content builder).
 
-- `backend/app/services/region_analyzer.py`
-- Folder `backend/models/regions/` (berisi file .onnx atau .pth)
+**Definition of Done:**  
+`curl -F "file=@test.jpg" http://localhost:8000/api/analyze` menghasilkan JSON dengan field `strengths` dan `suggestions` yang terisi berdasarkan aturan.
 
-**Output:** Skor mata, alis, hidung, bibir, rahang, pipi dalam rentang 0–100.
+**Testing Checklist:**
 
-**Testing:**
+- Kirim gambar dengan skor tinggi di jawline → lihat strengths muncul.
+- Kirim gambar dengan skin_quality rendah → suggestions muncul.
+- Kirim gambar tanpa wajah → error 422, bukan report.
 
-- Karena model belum dilatih, uji hanya memastikan pipeline berjalan dan menghasilkan angka numerik.
-- Validasi crop region sesuai dengan landmark.
+**Risiko:**  
+Performance: pembacaan YAML setiap request? Kita cache di modul.
 
-**Dependency:** Stage 9.2 (landmark untuk crop), Stage 9.1 (embedding bisa digunakan sebagai tambahan input).
+**Catatan Engineering:**  
+Pisahkan logic report dari analysis agar bisa diuji terpisah. Gunakan dependency injection untuk report builder.
 
 ---
 
-### Stage 9.4 — Skin Analyzer
+### Stage 10.4 — Confidence Scoring Integration
 
-**Objective:** Menganalisis kualitas kulit dari patch pipi.
+**Objective:**  
+Memastikan setiap skor dan overall score memiliki confidence yang bermakna, dan ditampilkan dalam laporan.
+
+**Mengapa stage ini diperlukan:**  
+Confidence adalah elemen kunci dari laporan yang dapat dipercaya. Saat ini confidence masih placeholder; di stage ini kita setidaknya menyediakan struktur yang benar dan menggunakan nilai yang ada dari model (jika model regresi, bisa menggunakan variance). Untuk placeholder, kita bisa mempertahankan nilai acak tetapi dengan label yang jelas (misal: "confidence": "low").
+
+**Input:**  
+Skor dari M9 beserta confidence-nya (jika ada) atau nilai default.
+
+**Process:**
+
+- Di aggregator atau content builder, tambahkan pemetaan confidence untuk setiap kategori.
+- Untuk MVP, karena confidence belum nyata, kita gunakan nilai default 0.5 atau label "Not available".
+- Tetap cantumkan field `confidence` di setiap bagian laporan.
+
+**Output:**  
+Setiap `FeatureScore` memiliki properti `confidence` (0.0–1.0).
 
 **Deliverables:**
 
-- Modul `backend/app/services/skin_analyzer.py`.
-- Preprocessing: crop area pipi (dari landmark), konversi ke LAB color space, ekstrak fitur tekstur (LBP, GLCM) atau gunakan CNN kecil.
-- Model regresi untuk: skin quality, texture, tone.
-- Placeholder model (skor acak) untuk saat ini.
+- Update skema (jika belum) untuk mencakup confidence di tiap sub-skema.
+- Update `aggregator.py` dan `report_builder.py` untuk mempropagasi confidence.
 
-**Files:**
+**Dependency:**  
+Stage 10.1, 10.3.
 
-- `backend/app/services/skin_analyzer.py`
-- `backend/models/skin/`
+**Definition of Done:**  
+Response JSON mengandung `confidence` di level overall dan per kategori (jika memungkinkan).
 
-**Output:** Skor skin quality, texture, tone.
+**Testing Checklist:**
 
-**Testing:** Crop pipi terlihat benar; output numerik.
+- Cek apakah confidence muncul di response.
+- Uji jika confidence tidak tersedia → tampilkan null atau default.
 
-**Dependency:** Stage 9.2 (landmark untuk crop).
+**Risiko:**  
+Kebingungan pengguna jika confidence rendah; nanti bisa diatasi dengan threshold.
+
+**Catatan Engineering:**  
+Jangan membuat perhitungan confidence baru di sini; hanya meneruskan dari model.
 
 ---
 
-### Stage 9.5 — Overall Attractiveness & Score Aggregation
+### Stage 10.5 — Frontend Report Display (Basic)
 
-**Objective:** Menggabungkan semua skor dari modul sebelumnya menjadi satu skor overall yang mudah dipahami.
+**Objective:**  
+Menyediakan tampilan laporan di frontend setelah upload berhasil (state `RESULT_READY`).
+
+**Mengapa stage ini diperlukan:**  
+Laporan harus terlihat oleh pengguna. Tanpa ini, Milestone 10 tidak lengkap.
+
+**Input:**  
+Response JSON dari `/api/analyze` yang sudah disimpan di frontend (misal setelah upload, kita langsung panggil `/api/analyze` dengan gambar yang sama, atau kita ubah alur agar setelah upload otomatis analyze dan kembalikan report).  
+Untuk meminimalkan perubahan di M7, kita bisa membuat frontend melakukan panggilan kedua ke `/api/analyze` setelah upload sukses, menggunakan filename yang diterima, atau mengirim gambar lagi. Namun karena gambar sudah diunggah, lebih baik backend menyimpan analysis_result dan mengembalikan ID.  
+**Penyederhanaan:** Endpoint `/api/analyze` menerima file langsung, sehingga frontend bisa langsung memanggilnya setelah capture, tanpa upload terpisah. Tapi kita sudah punya alur upload → preprocessing → analysis. Agar tidak mengubah banyak, kita akan membuat endpoint `/api/report` yang menerima `filename` (hasil upload) dan mengembalikan laporan. Jadi alur: Upload → dapat filename → frontend panggil `/api/report?file=filename` → dapat laporan.
+
+**Process:**
+
+- Buat endpoint `/api/report` di backend yang membaca file dari `uploads/`, menjalankan pipeline preprocessing + analysis + report generation.
+- Di frontend, setelah tombol "Continue" sukses (state `RESULT_READY`), panggil `/api/report` dengan `filename`.
+- Tampilkan laporan sederhana: overall score, list strengths, suggestions.
+
+**Output:**  
+Halaman frontend menampilkan laporan (bisa menggantikan preview, atau di bawahnya).
 
 **Deliverables:**
 
-- Modul `backend/app/services/aggregator.py` yang menerima hasil dari geometry, region, skin analyzer dan menghitung:
-  - Overall attractiveness score (rata‑rata terboboti, atau menggunakan model NIMA terpisah).
-  - Confidence score untuk setiap kategori dan overall.
-- Endpoint `POST /api/analyze` yang menerima gambar (atau path gambar yang sudah di‑preprocess), menjalankan seluruh pipeline analisis, dan mengembalikan JSON lengkap.
+- `backend/app/api/report.py` dengan endpoint GET `/api/report?file=...`
+- Modifikasi `frontend/js/capture.js` untuk mengambil dan menampilkan laporan.
+- Elemen HTML untuk display laporan.
 
-**Files:**
+**Dependency:**  
+Stage 10.3 (report generation), Stage 7.2 (upload).
 
-- `backend/app/services/aggregator.py`
-- `backend/app/api/analysis.py`
-- `backend/app/main.py` (tambah router)
+**Definition of Done:**  
+Alur lengkap: Capture → Upload → Klik Continue → (backend analyze) → frontend menampilkan overall score dan strengths/suggestions.
 
-**Output:** JSON dengan semua skor, misalnya:
+**Testing Checklist:**
 
-```json
-{
-  "face_structure": { "shape": "oval", "harmony": 78, "symmetry": 85 },
-  "eyes": { "size": 70, "spacing": 65, "shape": 80 },
-  ...
-  "overall_attractiveness": 82,
-  "confidence": 0.88
-}
-```
+- Uji alur end-to-end dengan gambar wajah.
+- Uji error handling jika file tidak ditemukan.
+- Uji tampilan responsif.
 
-**Testing:**
+**Risiko:**  
+Menambah kompleksitas frontend; tetap minimalis.
 
-- Kirim gambar yang sudah di‑preprocess → dapatkan JSON dengan semua bidang terisi.
-- Uji dengan gambar wajah yang berbeda dan pastikan skor bervariasi (walaupun acak).
-
-**Dependency:** Semua Stage 9.1–9.4.
+**Catatan Engineering:**  
+Gunakan template literal untuk merender laporan di JS. Jangan buat UI terlalu rumit.
 
 ---
 
-### Stage 9.6 — Model Training Pipeline (Optional untuk MVP)
+## Langkah 5 — Urutan Stage yang Direkomendasikan
 
-**Objective:** Menyiapkan infrastruktur untuk melatih model‑model head di atas secara independen.
+1. **10.1** (Schema) → fondasi kontrak data.
+2. **10.2** (Content Builder) → logika strengths/suggestions.
+3. **10.3** (Endpoint & Aggregation) → gabungkan.
+4. **10.4** (Confidence Integration) → penyempurnaan.
+5. **10.5** (Frontend Display) → tampilkan ke pengguna.
 
-**Deliverables:**
-
-- Skrip pelatihan terpisah di `training/` (di luar backend).
-- Dataset annotation format.
-- Konfigurasi training (augmentasi, loss, optimizer).
-
-**Files:** Folder `training/` baru.
-
-**Output:** Kemampuan untuk memperbarui model tanpa mengubah kode backend.
-
-**Dependency:** Tidak diperlukan untuk MVP, bisa dilakukan paralel.
+Urutan ini memastikan setiap stage membangun di atas yang sebelumnya.
 
 ---
 
-## Step 7 — Dependency Check
+## Langkah 6 — Rekomendasi Praktik Terbaik
 
-- **Stage 9.1** adalah fondasi semua analisis karena embedding digunakan di banyak tempat.
-- **Stage 9.2** (geometry) bisa dimulai setelah kita memiliki landmark, yang sudah ada dari detector (Stage 8.1). Jadi bisa paralel dengan 9.1.
-- **Stage 9.3 & 9.4** bergantung pada 9.2 untuk crop region.
-- **Stage 9.5** bergantung pada semua stage sebelumnya.
-- **Stage 9.6** independen, dapat dimulai kapan saja.
+- **Separation of Concerns:** Report generator tidak boleh tahu bagaimana skor dihasilkan. Ia hanya membaca dictionary.
+- **Config-Driven Rules:** Aturan strengths/suggestions disimpan dalam file YAML, memudahkan non-developer untuk menyesuaikan.
+- **Schema Validation:** Gunakan Pydantic untuk memvalidasi input dan output.
+- **Immutability:** Report builder tidak mengubah data analisis; ia membuat struktur baru.
+- **Testing:** Setiap komponen (rules engine, formatter) harus dapat diuji secara unit.
+- **Jangan Over-Engineering:** Untuk saran, gunakan aturan if-else sederhana. Tidak perlu machine learning lagi.
+- **Confidence harus transparan:** Tampilkan sebagai persentase atau label (High/Medium/Low) agar pengguna paham keterbatasan.
+- **Frontend minimal:** Mulai dengan tampilan teks biasa, tanpa grafik. Tingkatkan di M12.
 
-Urutan pengerjaan yang direkomendasikan: 9.1 → (9.2, 9.3, 9.4) → 9.5. Stage 9.6 bisa dijalankan bersamaan.
-
----
-
-## Step 8 — Future Expansion
-
-Arsitektur ini sangat modular. Penambahan fitur baru seperti Age, Gender, Emotion dapat dilakukan dengan menambah head baru yang menerima embedding atau patch spesifik. Face Recognition tinggal menggunakan embedding yang sudah ada. Hairstyle Recommendation mungkin memerlukan segmentasi rambut, yang bisa ditambahkan sebagai modul terpisah. Karena setiap modul berkomunikasi melalui interface yang jelas (embedding, landmark, patch), perubahan di satu modul tidak akan merusak yang lain.
-
----
-
-## Step 9 — Engineering Review
-
-- **Apakah mengikuti pelajaran empat repositori?** Ya: embedding dari DeepFace, backbone pretrained dari MEBeauty, distribusi opini dari Facial Beauty Prediction, dan fitur geometris dari face‑rating.
-- **Apakah ada over‑engineering?** Tidak, kita memulai dengan placeholder model untuk region dan skin, hanya menyiapkan infrastruktur. Fungsionalitas penuh akan bertambah seiring ketersediaan data.
-- **Apakah pipeline AI mudah dilatih?** Ya, setiap head dapat dilatih secara independen dengan dataset yang relevan.
-- **Apakah preprocessing konsisten?** Sangat. Semua input ke head berasal dari pipeline preprocessing yang sama (Stage 8), sehingga tidak ada perbedaan training‑inference.
-- **Apakah confidence score memiliki dasar?** Untuk model regresi, kita bisa menggunakan variance dari beberapa forward pass dengan dropout (MC Dropout). Untuk rule‑based geometry, confidence bisa berdasarkan seberapa jelas landmark terdeteksi.
-- **Apakah hasil dapat dijelaskan?** Ya, setiap skor berasal dari modul yang spesifik, dan kita bisa memberikan penjelasan per kategori.
-- **Apakah realistis untuk v1.0?** Dengan pendekatan bertahap dan penggunaan placeholder model, kita bisa memiliki pipeline fungsional yang menghasilkan skor (walaupun belum akurat) dan terus ditingkatkan.
-
-**Kesimpulan:** Milestone 9 dirancang dengan arsitektur hybrid yang modular, mengadopsi praktik terbaik dari keempat repositori, dan memungkinkan pengembangan bertahap hingga mencapai akurasi tinggi untuk analisis kecantikan wajah yang komprehensif.
+Dengan desain ini, Milestone 10 akan menghasilkan laporan yang informatif, modular, dan siap untuk ditingkatkan seiring dengan peningkatan model AI. Siap untuk memulai implementasi Stage 10.1. Apakah Anda setuju?
