@@ -5,7 +5,7 @@ from app.exceptions import ValidationError
 logger = logging.getLogger("faceai.validator")
 
 # Default criteria (can be moved to config later)
-MIN_CONFIDENCE = 0.9          # akan sering gagal untuk gambar real; dapat diubah di config
+MIN_CONFIDENCE = 0.7          # akan sering gagal untuk gambar real; dapat diubah di config
 MIN_FACE_HEIGHT = 100         # pixels
 
 def validate_faces(faces: list[FaceObject]) -> FaceObject:
