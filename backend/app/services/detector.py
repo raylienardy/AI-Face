@@ -53,6 +53,16 @@ class Detector:
                     landmarks=landmarks.tolist() if landmarks is not None else None
                 ))
         return results
+    
+    def get_recognition_model(self):
+        """Mengembalikan model recognition (ArcFace/w600k_r50)."""
+        self._initialize()
+        return self.model.models['recognition']
+      
+    def get_landmark_model(self):
+        """Mengembalikan model landmark 106‑titik (2d106det)."""
+        self._initialize()
+        return self.model.models.get('landmark_2d_106', None)
 
 # Singleton instance
 detector = Detector()
