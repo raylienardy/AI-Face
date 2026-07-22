@@ -1,11 +1,23 @@
+<!--
+========================================
+FaceAI
+Milestone 12 – Stage 12.7
+UI & Performance Final
+Version 0.1
+========================================
+-->
 <!doctype html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>FaceAI - Face Intelligence Platform</title>
+    <!-- Allow eval for MediaPipe (development only) -->
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data:; media-src 'self'; connect-src *;"
+    />
     <link rel="stylesheet" href="css/style.css" />
-    <!-- MediaPipe Face Detection Library -->
     <script
       src="https://cdn.jsdelivr.net/npm/@mediapipe/face_detection@0.4.1646425229/face_detection.js"
       crossorigin="anonymous"
@@ -17,54 +29,49 @@
       <span class="header__version">v0.1</span>
     </header>
 
-    <main class="main">
-      <section class="status-panel" id="backend-status">
+    <main class="main" role="main">
+      <!-- Backend Status -->
+      <section
+        class="status-panel"
+        id="backend-status"
+        aria-label="Backend status"
+      >
         <h2 class="status-panel__title">Backend Status</h2>
         <p class="status-panel__value status-panel__value--disconnected">
           Not Connected
         </p>
       </section>
 
-      <section class="camera-preview" id="camera-preview">
+      <!-- Camera Preview -->
+      <section
+        class="camera-preview"
+        id="camera-preview"
+        aria-label="Camera preview"
+      >
         <video id="camera-video" autoplay playsinline muted></video>
-        <canvas id="face-canvas"></canvas>
-        <!-- Countdown Overlay (Stage 6.2) -->
+        <canvas id="face-canvas" aria-hidden="true"></canvas>
+        <div class="camera-preview__placeholder" id="camera-placeholder">
+          <p class="camera-preview__text">Camera Not Started</p>
+        </div>
+        <!-- Countdown Overlay -->
         <div id="countdown-overlay" class="countdown-overlay">
           <span id="countdown-text" class="countdown-overlay__text"></span>
         </div>
+        <!-- Preview Image -->
         <img
           id="capture-preview"
           class="capture-preview-img"
           style="display: none"
           alt="Captured face"
         />
-        <div class="camera-preview__placeholder" id="camera-placeholder">
-          <p class="camera-preview__text">Camera Not Started</p>
-        </div>
       </section>
 
-      <!-- Capture Buttons (Stage 6.4) -->
-      <div id="capture-buttons" class="capture-buttons" style="display: none">
-        <button id="retake-btn" class="btn btn--secondary">Retake</button>
-        <button id="continue-btn" class="btn btn--primary">Continue</button>
-      </div>
-
-      <div id="report-container" class="report-container" style="display: none">
-        <h2>Face Analysis Report</h2>
-        <div id="report-content"></div>
-      </div>
-
-      <!-- History Panel (Stage 11.4) -->
-      <div id="history-panel" class="history-panel" style="display: none">
-        <div class="history-header">
-          <h3>Analysis History</h3>
-          <button id="close-history-btn" class="btn btn--small">Close</button>
-        </div>
-        <div id="history-list"></div>
-        <div id="history-detail" style="display: none"></div>
-      </div>
-
-      <section class="system-status" id="system-status">
+      <!-- System Status Indicators -->
+      <section
+        class="system-status"
+        id="system-status"
+        aria-label="System status"
+      >
         <div class="system-status__item" id="status-backend">
           <span class="system-status__label">Backend</span>
           <span class="system-status__dot system-status__dot--inactive"></span>
@@ -78,17 +85,45 @@
           <span class="system-status__dot system-status__dot--inactive"></span>
         </div>
       </section>
+
+      <!-- Alignment Preview -->
+      <div
+        class="align-preview"
+        id="align-preview"
+        aria-label="Aligned face preview"
+      >
+        <canvas id="align-canvas" width="150" height="150"></canvas>
+        <span class="align-preview__label">Aligned</span>
+      </div>
+
+      <!-- Action Button -->
+      <button
+        class="btn btn--primary"
+        id="start-camera-btn"
+        aria-label="Start Camera"
+      >
+        Start Camera
+      </button>
+
+      <!-- Camera Error Message -->
+      <p class="camera-error" id="camera-error" role="alert"></p>
+
+      <!-- Ready Indicator -->
+      <div
+        id="ready-indicator"
+        style="display: none; text-align: center"
+        aria-live="polite"
+      >
+        <div style="font-size: 1.2rem; font-weight: bold; color: #22c55e">
+          ✅ Ready to Capture
+        </div>
+      </div>
+
+      <!-- Quality Debug -->
       <div
         id="quality-debug"
-        style="
-          background: #1e293b;
-          padding: 1rem;
-          border-radius: 12px;
-          font-size: 0.85rem;
-          line-height: 1.6;
-          color: #f8fafc;
-          display: none;
-        "
+        style="display: none"
+        aria-label="Quality debug information"
       >
         <strong>Quality Debug</strong>
         <pre
@@ -101,24 +136,58 @@
         ></pre>
       </div>
 
-      <!-- Ready Indicator (Stage 5.7) -->
-      <div id="ready-indicator" style="display: none; text-align: center">
-        <div style="font-size: 1.2rem; font-weight: bold; color: #22c55e">
-          ✅ Ready to Capture
+      <!-- Capture Buttons -->
+      <div id="capture-buttons" class="capture-buttons" style="display: none">
+        <button
+          id="retake-btn"
+          class="btn btn--secondary"
+          aria-label="Retake photo"
+        >
+          Retake
+        </button>
+        <button
+          id="continue-btn"
+          class="btn btn--primary"
+          aria-label="Continue to analysis"
+        >
+          Continue
+        </button>
+      </div>
+
+      <!-- Report Container -->
+      <div
+        id="report-container"
+        class="report-container"
+        style="display: none"
+        aria-label="Analysis report"
+      >
+        <h2>Face Analysis Report</h2>
+        <div id="report-content"></div>
+      </div>
+
+      <!-- History Panel -->
+      <div
+        id="history-panel"
+        class="history-panel"
+        style="display: none"
+        aria-label="Analysis history"
+      >
+        <div class="history-header">
+          <h3>Analysis History</h3>
+          <button
+            id="close-history-btn"
+            class="btn btn--small"
+            aria-label="Close history"
+          >
+            Close
+          </button>
         </div>
+        <div id="history-list"></div>
+        <div id="history-detail" style="display: none"></div>
       </div>
-
-      <div class="align-preview" id="align-preview">
-        <canvas id="align-canvas" width="150" height="150"></canvas>
-        <span class="align-preview__label">Aligned</span>
-      </div>
-
-      <button class="btn btn--primary" id="start-camera-btn">
-        Start Camera
-      </button>
-      <p class="camera-error" id="camera-error"></p>
     </main>
 
+    <!-- Scripts -->
     <script src="js/core/config.js"></script>
     <script src="js/utils/helpers.js"></script>
     <script src="js/utils/geometry.js"></script>
@@ -127,8 +196,8 @@
     <script src="js/ui/drawing.js"></script>
     <script src="js/core/camera.js"></script>
     <script src="js/modules/detection.js"></script>
-    <script src="js/modules/upload.js"></script>
     <script src="js/modules/quality.js"></script>
+    <script src="js/modules/upload.js"></script>
     <script src="js/modules/capture.js"></script>
     <script src="js/modules/history.js"></script>
     <script src="js/app.js"></script>
