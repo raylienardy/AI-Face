@@ -86,6 +86,72 @@ FaceAI.capture = (function () {
     FaceAI.state.set("CAPTURED");
   }
 
+  async function fetchReport(filename) {
+    const reportUrl = `http://localhost:8000/api/report?file=${encodeURIComponent(filename)}`;
+    try {
+      const res = await fetch(reportUrl);
+      if (!res.ok) {
+        throw new Error(`Server error: ${res.status}`);
+      }
+      const reportData = await res.json();
+      displayReport(reportData);
+    } catch (err) {
+      console.error("Failed to fetch report:", err);
+      FaceAI.ui.showError("Failed to load analysis report.");
+    }
+  }
+
+  function displayReport(data) {
+    const container = document.getElementById("report-container");
+    const content = document.getElementById("report-content");
+    if (!container || !content) return;
+
+    let html = `
+      <div class="report-overall">
+        <strong>Overall Score: ${data.overall.value.toFixed(1)}</strong> 
+        (confidence: ${(data.overall.confidence * 100).toFixed(0)}%)
+      </div>
+    `;
+    // Detail categories (contoh: eyes, nose, dll)
+    const categories = [
+      { key: "face_structure", label: "Face Structure" },
+      { key: "eyes", label: "Eyes" },
+      { key: "eyebrows", label: "Eyebrows" },
+      { key: "nose", label: "Nose" },
+      { key: "mouth", label: "Mouth" },
+      { key: "jaw", label: "Jaw" },
+      { key: "cheek", label: "Cheeks" },
+      { key: "skin", label: "Skin" },
+    ];
+    for (const cat of categories) {
+      const catData = data[cat.key];
+      if (!catData) continue;
+      html += `<div class="report-category"><strong>${cat.label}</strong><div class="report-scores">`;
+      // Iterasi properti dalam kategori (kecuali shape yang khusus)
+      for (const [prop, val] of Object.entries(catData)) {
+        if (prop === "shape" && cat.key === "face_structure") continue; // shape ditampilkan terpisah
+        if (typeof val === "object" && val !== null && "value" in val) {
+          html += `<div class="report-score"><span>${prop}</span><span>${val.value.toFixed(1)}</span></div>`;
+        }
+      }
+      html += `</div></div>`;
+    }
+    // Strengths & suggestions
+    if (data.strengths && data.strengths.length > 0) {
+      html += `<div class="report-strengths"><strong>Strengths:</strong><ul>`;
+      data.strengths.forEach((s) => (html += `<li>${s}</li>`));
+      html += `</ul></div>`;
+    }
+    if (data.suggestions && data.suggestions.length > 0) {
+      html += `<div class="report-suggestions"><strong>Suggestions:</strong><ul>`;
+      data.suggestions.forEach((s) => (html += `<li>${s}</li>`));
+      html += `</ul></div>`;
+    }
+
+    content.innerHTML = html;
+    container.style.display = "block";
+  }
+
   function checkState() {
     const state = FaceAI.state.get();
     if (state === "FACE_READY") {
@@ -102,6 +168,7 @@ FaceAI.capture = (function () {
   function onRetake() {
     FaceAI.ui.hidePreview();
     FaceAI.ui.hideCaptureButtons();
+    document.getElementById("report-container").style.display = "none";
     lastCapture = null;
 
     const video = FaceAI.ui.getVideoElement();
@@ -131,6 +198,10 @@ FaceAI.capture = (function () {
       FaceAI.ui.showError("");
       btn.textContent = "Uploaded ✓";
       FaceAI.state.set("RESULT_READY");
+
+      // --- Panggil report endpoint menggunakan filename dari response ---
+      const filename = response.filename;
+      fetchReport(filename);
     } catch (error) {
       console.error("Upload failed:", error.message);
       FaceAI.ui.showError(error.message);
