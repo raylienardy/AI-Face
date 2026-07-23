@@ -180,6 +180,11 @@ window.FaceAI = window.FaceAI || {};
       }
     },
 
+    updateUserGuidance(text) {
+      const el = document.getElementById("guidance-text");
+      if (el) el.textContent = text;
+    },
+
     showToast(message) {
       // Hapus toast sebelumnya jika ada
       const old = document.getElementById("toast");

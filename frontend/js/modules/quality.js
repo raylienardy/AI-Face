@@ -63,6 +63,10 @@ FaceAI.quality = (function () {
           videoEl,
           faceData.bbox,
         );
+        const guidanceText = generateGuidance(
+          { position, size, lighting, blur, stability, visibility },
+          _readyCounter,
+        );
 
         const allChecksPassed =
           position.centered &&
@@ -144,6 +148,7 @@ VISIBILITY
 CONFIDENCE : ${fmt(faceData.confidence * 100, 1)}%
 READY     : ${isReady ? "✅ YES" : "❌ NO"} (counter: ${_readyCounter}/${READY_DEBOUNCE_FRAMES})`;
 
+        FaceAI.ui.updateUserGuidance(guidanceText);
         FaceAI.ui.updateQualityDebug(report);
       } else {
         resetBuffer();
@@ -184,6 +189,44 @@ READY     : ${isReady ? "✅ YES" : "❌ NO"} (counter: ${_readyCounter}/${READY
     const tooSmall = ratio < FaceAI.config.MIN_FACE_HEIGHT_RATIO;
     const tooClose = ratio > FaceAI.config.MAX_FACE_HEIGHT_RATIO;
     return { tooSmall, tooClose, good: !tooSmall && !tooClose };
+  }
+
+  function generateGuidance(checks, readyCounter) {
+    // checks berisi: position, size, lighting, blur, stability, visibility
+    const msgs = [];
+
+    if (!checks.position.centered) {
+      if (checks.position.tooHigh)
+        msgs.push("Posisikan wajah sedikit lebih rendah");
+      else if (checks.position.tooLow)
+        msgs.push("Posisikan wajah sedikit lebih tinggi");
+      else msgs.push("Posisikan wajah di tengah layar");
+    }
+    if (checks.size.tooSmall) msgs.push("Dekatkan wajah ke kamera");
+    if (checks.size.tooClose) msgs.push("Jauhkan wajah dari kamera");
+    if (checks.lighting.tooDark)
+      msgs.push("Ruangan terlalu gelap, cari pencahayaan lebih terang");
+    if (checks.lighting.tooBright)
+      msgs.push("Pencahayaan terlalu terang, kurangi silau");
+    if (checks.blur.blurry)
+      msgs.push("Wajah terlihat buram, coba jaga kepala tetap stabil");
+    if (!checks.stability.stable) msgs.push("Jangan bergerak dulu");
+    if (!checks.visibility.allVisible) {
+      const missing = [];
+      if (!checks.visibility.eyesVisible) missing.push("mata");
+      if (!checks.visibility.noseVisible) missing.push("hidung");
+      if (!checks.visibility.mouthVisible) missing.push("mulut");
+      msgs.push(`Pastikan ${missing.join(", ")} terlihat jelas`);
+    }
+
+    if (msgs.length === 0) {
+      if (readyCounter < READY_DEBOUNCE_FRAMES) {
+        return "Mohon untuk tidak bergerak selama beberapa detik...";
+      } else {
+        return "Siap! Tunggu hitungan mundur...";
+      }
+    }
+    return msgs.join(" • ");
   }
 
   function checkLighting(video, bbox) {

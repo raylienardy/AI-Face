@@ -608,3 +608,18 @@ body:not(.dev-mode) #status-camera {
   background: rgba(34, 197, 94, 0.15);
   color: #4ade80;
 }
+
+/* ---------- User Guidance ---------- */
+.user-guidance {
+  background: var(--color-surface);
+  border-radius: var(--border-radius);
+  padding: 1rem;
+  text-align: center;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-base);
+  display: none; /* hanya muncul di mode normal via JS */
+}
+/* Elemen ini hanya terlihat saat bukan dev-mode */
+body:not(.dev-mode) .user-guidance {
+  display: block;
+}

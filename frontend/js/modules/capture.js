@@ -260,19 +260,21 @@ FaceAI.capture = (function () {
     container.style.display = "block";
 
     // Tampilkan tombol View History (hanya jika belum ada)
-    let viewBtn = document.getElementById("view-history-btn");
-    if (!viewBtn) {
-      viewBtn = document.createElement("button");
-      viewBtn.id = "view-history-btn";
-      viewBtn.className = "btn btn--secondary";
-      viewBtn.textContent = "View History";
-      viewBtn.addEventListener("click", () => {
-        document.getElementById("report-container").style.display = "none";
-        FaceAI.history.show();
-      });
-      container.parentNode.insertBefore(viewBtn, container.nextSibling);
-    } else {
-      viewBtn.style.display = "inline-block";
+    if (FaceAI.config.ENABLE_HISTORY) {
+      let viewBtn = document.getElementById("view-history-btn");
+      if (!viewBtn) {
+        viewBtn = document.createElement("button");
+        viewBtn.id = "view-history-btn";
+        viewBtn.className = "btn btn--secondary";
+        viewBtn.textContent = "View History";
+        viewBtn.addEventListener("click", () => {
+          document.getElementById("report-container").style.display = "none";
+          FaceAI.history.show();
+        });
+        container.parentNode.insertBefore(viewBtn, container.nextSibling);
+      } else {
+        viewBtn.style.display = "inline-block";
+      }
     }
   }
 
@@ -280,14 +282,21 @@ FaceAI.capture = (function () {
   // Retake
   // ==========================================
   function onRetake() {
+    // Reset tombol Continue
+    const continueBtn = document.getElementById("continue-btn");
+    if (continueBtn) {
+      continueBtn.textContent = "Continue";
+      continueBtn.disabled = false;
+    }
+
     FaceAI.ui.hidePreview();
-    // Bersihkan src preview untuk bebaskan memori
     const previewImg = document.getElementById("capture-preview");
     if (previewImg) {
       previewImg.removeAttribute("src");
     }
     FaceAI.ui.hideCaptureButtons();
-    // Hide report and history
+
+    // Sembunyikan report dan history
     const reportContainer = document.getElementById("report-container");
     if (reportContainer) {
       reportContainer.style.display = "none";
@@ -296,7 +305,6 @@ FaceAI.capture = (function () {
     const viewBtn = document.getElementById("view-history-btn");
     if (viewBtn) viewBtn.style.display = "none";
     FaceAI.history.hide();
-    document.getElementById("report-container").style.display = "none";
 
     lastCapture = null;
 
@@ -311,6 +319,10 @@ FaceAI.capture = (function () {
   function bindButtons() {
     const retakeBtn = document.getElementById("retake-btn");
     const continueBtn = document.getElementById("continue-btn");
+    if (continueBtn) {
+      continueBtn.textContent = "Continue";
+      continueBtn.disabled = false;
+    }
     if (retakeBtn) retakeBtn.addEventListener("click", onRetake);
     if (continueBtn) continueBtn.addEventListener("click", onContinue);
   }
