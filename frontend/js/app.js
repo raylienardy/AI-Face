@@ -30,6 +30,9 @@
     const devMode = localStorage.getItem("faceai_dev_mode") === "true";
     FaceAI.ui.setDevMode(devMode);
 
+    // Cek koneksi backend
+    checkBackendConnection();
+
     // Kombinasi rahasia: Ctrl+Shift+D
     window.addEventListener("keydown", (e) => {
       if (e.ctrlKey && e.shiftKey && e.code === "KeyD") {
@@ -63,6 +66,31 @@
       FaceAI.capture.init();
     } catch (err) {
       console.error("Failed to start camera/detection:", err);
+    }
+  }
+  async function checkBackendConnection() {
+    const statusEl = document.getElementById("backend-status");
+    if (!statusEl) return;
+
+    try {
+      const res = await fetch("http://localhost:8000/");
+      if (res.ok) {
+        const dot = document.querySelector(
+          "#status-backend .system-status__dot",
+        );
+        if (dot) {
+          dot.classList.remove("system-status__dot--inactive");
+          dot.classList.add("system-status__dot--active");
+        }
+        const valueEl = statusEl.querySelector(".status-panel__value");
+        if (valueEl) {
+          valueEl.textContent = "Connected";
+          valueEl.classList.remove("status-panel__value--disconnected");
+          valueEl.classList.add("status-panel__value--connected");
+        }
+      }
+    } catch (e) {
+      // Biarkan tetap "Not Connected"
     }
   }
 

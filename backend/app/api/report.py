@@ -164,12 +164,22 @@ async def get_report(file: str = Query(..., description="Filename hasil upload")
 
         # Simpan ke history
         history_service = HistoryService()
+        # Beri image_path sesuai config
+        image_path_for_db = file_path if config.ENABLE_HISTORY_IMAGES else ""
         analysis_id = history_service.create(
-            image_path=file_path,
+            image_path=image_path_for_db,
             report=report,
             model_version=config.MODEL_VERSION,
             preprocessing_version=config.PREPROCESSING_VERSION
         )
+
+        # Jika gambar tidak disimpan, hapus file dari uploads
+        if not config.ENABLE_HISTORY_IMAGES:
+            try:
+                os.remove(file_path)
+                logger.info("Image removed after analysis (history images disabled)")
+            except Exception as e:
+                logger.warning(f"Failed to remove uploaded image: {e}")
 
         response = ReportResponse(
             **report.model_dump(),

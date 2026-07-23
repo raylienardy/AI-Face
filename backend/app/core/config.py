@@ -20,3 +20,6 @@ PREPROCESS_OUTPUT_DIR = "processed"
 # Model & Pipeline versioning (Stage 11.2)
 MODEL_VERSION = "insightface-buffalo_l-v1"
 PREPROCESSING_VERSION = "align-eyes-letterbox-224-v1"
+
+# History images (Fase 12.12)
+ENABLE_HISTORY_IMAGES = False

@@ -10,14 +10,13 @@ def get_connection():
     return conn
 
 def init_db():
-    """Inisialisasi database: buat tabel jika belum ada."""
     conn = get_connection()
     cursor = conn.cursor()
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS analyses (
             id TEXT PRIMARY KEY,
             timestamp TEXT NOT NULL,
-            image_path TEXT NOT NULL,
+            image_path TEXT,
             report_json TEXT NOT NULL,
             overall_score REAL,
             confidence REAL,
@@ -28,6 +27,10 @@ def init_db():
             status TEXT DEFAULT 'completed'
         )
     ''')
+    # Jika tabel sudah ada, ubah kolom agar nullable (abaikan error jika sudah nullable)
+    try:
+        cursor.execute('ALTER TABLE analyses MODIFY COLUMN image_path TEXT')
+    except:
+        pass
     conn.commit()
     conn.close()
-    print(f"Database initialized at {DB_PATH}")
