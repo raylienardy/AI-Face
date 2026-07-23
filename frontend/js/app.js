@@ -6,6 +6,7 @@
 
 (function () {
   function init() {
+    FaceAI.ui.setDevMode(false);
     FaceAI.state.set("IDLE");
     const startBtn = document.getElementById("start-camera-btn");
     startBtn.addEventListener("click", onStartClick);

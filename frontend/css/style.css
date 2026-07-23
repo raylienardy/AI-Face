@@ -529,3 +529,12 @@ body {
 #face-canvas {
   transition: opacity 0.15s ease;
 }
+
+/* ---------- Mode Developer (default tersembunyi) ---------- */
+body:not(.dev-mode) #quality-debug,
+body:not(.dev-mode) #align-preview,
+body:not(.dev-mode) #backend-status,
+body:not(.dev-mode) #status-backend,
+body:not(.dev-mode) #status-camera {
+  display: none !important;
+}

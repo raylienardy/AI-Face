@@ -30,6 +30,14 @@ window.FaceAI = window.FaceAI || {};
       ui.placeholder.classList.add("hidden");
     },
 
+    setDevMode(enabled) {
+      if (enabled) {
+        document.body.classList.add("dev-mode");
+      } else {
+        document.body.classList.remove("dev-mode");
+      }
+    },
+
     showPlaceholder() {
       ui.placeholder.classList.remove("hidden");
     },

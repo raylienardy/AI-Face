@@ -139,13 +139,13 @@ Karena browser memerlukan konteks aman (`localhost` atau HTTPS) untuk mengakses 
 cd frontend
 
 # Python 3
-python -m http.server 8000
+python -m http.server 8080
 
 # atau dengan Node.js (jika terinstall)
-npx http-server -p 8000
+npx http-server -p 8080
 ```
 
-Lalu buka `http://localhost:8000` di browser (Chrome/Edge/Firefox).
+Lalu buka `http://localhost:8080` di browser (Chrome/Edge/Firefox).
 
 > **Catatan:** Untuk menguji model deteksi (Stage 4.1), buka console browser dan jalankan:
 >
