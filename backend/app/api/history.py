@@ -1,4 +1,5 @@
 import json
+from logging import config
 from fastapi import APIRouter, HTTPException, Query
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
@@ -37,6 +38,8 @@ history_service = HistoryService()
 
 @router.get("/history", response_model=HistoryList)
 async def get_history(limit: int = Query(50, ge=1, le=200)):
+    if not config.ENABLE_HISTORY:
+          return {"count": 0, "items": [], "message": "History is disabled"}
     """
     Ambil daftar riwayat analisis. Diurutkan dari yang terbaru.
     """

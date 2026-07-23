@@ -2,12 +2,15 @@ import uuid
 import json
 from datetime import datetime, timezone
 from app.database import get_connection
+from app.core import config
 
 class HistoryService:
     """Layanan untuk mengelola riwayat analisis."""
     
     def create(self, image_path, report, model_version, preprocessing_version):
-        """Simpan analisis baru ke database. Return analysis_id."""
+        """Simpan analisis jika history diaktifkan. Jika tidak, kembalikan None."""
+        if not config.ENABLE_HISTORY:
+            return None   # tidak simpan apa‑apa
         analysis_id = uuid.uuid4().hex
         timestamp = datetime.now(timezone.utc).isoformat()
         

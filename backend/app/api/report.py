@@ -162,16 +162,18 @@ async def get_report(file: str = Query(..., description="Filename hasil upload")
     try:
         report = generate_report_from_file(file_path)
 
-        # Simpan ke history
-        history_service = HistoryService()
-        # Beri image_path sesuai config
-        image_path_for_db = file_path if config.ENABLE_HISTORY_IMAGES else ""
-        analysis_id = history_service.create(
-            image_path=image_path_for_db,
-            report=report,
-            model_version=config.MODEL_VERSION,
-            preprocessing_version=config.PREPROCESSING_VERSION
-        )
+        analysis_id = ""
+        if config.ENABLE_HISTORY:
+          # Simpan ke history
+          history_service = HistoryService()
+          # Beri image_path sesuai config
+          image_path_for_db = file_path if config.ENABLE_HISTORY_IMAGES else ""
+          analysis_id = history_service.create(
+              image_path=image_path_for_db,
+              report=report,
+              model_version=config.MODEL_VERSION,
+              preprocessing_version=config.PREPROCESSING_VERSION
+          )
 
         # Jika gambar tidak disimpan, hapus file dari uploads
         if not config.ENABLE_HISTORY_IMAGES:
