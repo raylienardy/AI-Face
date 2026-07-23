@@ -179,5 +179,32 @@ window.FaceAI = window.FaceAI || {};
         element.classList.add("system-status__dot--inactive");
       }
     },
+
+    showToast(message) {
+      // Hapus toast sebelumnya jika ada
+      const old = document.getElementById("toast");
+      if (old) old.remove();
+
+      const toast = document.createElement("div");
+      toast.id = "toast";
+      toast.textContent = message;
+      toast.style.position = "fixed";
+      toast.style.top = "20px";
+      toast.style.left = "50%";
+      toast.style.transform = "translateX(-50%)";
+      toast.style.backgroundColor = "rgba(0,0,0,0.8)";
+      toast.style.color = "#fff";
+      toast.style.padding = "8px 16px";
+      toast.style.borderRadius = "999px";
+      toast.style.fontSize = "14px";
+      toast.style.zIndex = "9999";
+      toast.style.transition = "opacity 0.3s";
+      document.body.appendChild(toast);
+
+      setTimeout(() => {
+        toast.style.opacity = "0";
+        setTimeout(() => toast.remove(), 300);
+      }, 2000);
+    },
   };
 })();

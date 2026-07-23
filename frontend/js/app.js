@@ -1,12 +1,16 @@
 /**
  * FaceAI Application Entry Point
- * Version: 0.1 – Milestone 4 Stage 4.6
+ * Version: 0.1 – Fase 12.9
+ *
+ * Initializes app, wires camera, detection, and developer mode toggle.
  */
 "use strict";
 
 (function () {
+  // ==========================================
+  // Initialization
+  // ==========================================
   function init() {
-    FaceAI.ui.setDevMode(false);
     FaceAI.state.set("IDLE");
     const startBtn = document.getElementById("start-camera-btn");
     startBtn.addEventListener("click", onStartClick);
@@ -21,24 +25,49 @@
     window.addEventListener("beforeunload", cleanup);
     document.addEventListener("visibilitychange", onVisibilityChange);
 
-    console.log("FaceAI frontend initialized (v0.1 – Milestone 4.6)");
+    // === Mode Developer ===
+    // Kembalikan status dari localStorage
+    const devMode = localStorage.getItem("faceai_dev_mode") === "true";
+    FaceAI.ui.setDevMode(devMode);
+
+    // Kombinasi rahasia: Ctrl+Shift+D
+    window.addEventListener("keydown", (e) => {
+      if (e.ctrlKey && e.shiftKey && e.code === "KeyD") {
+        e.preventDefault();
+        const current = document.body.classList.contains("dev-mode");
+        const newMode = !current;
+        localStorage.setItem("faceai_dev_mode", newMode.toString());
+        FaceAI.ui.setDevMode(newMode);
+        FaceAI.ui.showToast(
+          newMode ? "Developer mode enabled" : "Developer mode disabled",
+        );
+      }
+    });
+
+    console.log("FaceAI frontend initialized (v0.1 – Fase 12.9)");
   }
 
   async function onStartClick() {
-    if (FaceAI.camera.isActive() || FaceAI.camera.isStarting()) return;
-    await FaceAI.camera.start();
-    const video = FaceAI.ui.getVideoElement();
-    await FaceAI.detection.start(video);
-    // Mulai quality assessment (hanya sekali)
-    if (!FaceAI.quality._initialized) {
-      FaceAI.quality.init();
-      FaceAI.quality._initialized = true;
+    if (FaceAI.camera.isActive() || FaceAI.camera.isStarting()) {
+      return;
     }
-    FaceAI.capture.init();
+    try {
+      await FaceAI.camera.start();
+      const video = FaceAI.ui.getVideoElement();
+      await FaceAI.detection.start(video);
+      // Mulai quality assessment
+      if (!FaceAI.quality._initialized) {
+        FaceAI.quality.init();
+        FaceAI.quality._initialized = true;
+      }
+      FaceAI.capture.init();
+    } catch (err) {
+      console.error("Failed to start camera/detection:", err);
+    }
   }
 
   function onWebGLContextLost(event) {
-    event.preventDefault(); // allow context restoration
+    event.preventDefault();
     console.warn("WebGL context lost – detection paused");
     FaceAI.detection.stop();
     FaceAI.ui.showError("Graphics engine paused. Please refresh the page.");
@@ -46,13 +75,11 @@
 
   function onVisibilityChange() {
     if (document.hidden) {
-      // Tab not visible – stop detection to save resources
       if (FaceAI.detection.isRunning()) {
         FaceAI.detection.stop();
         console.log("Detection paused (tab hidden)");
       }
     } else {
-      // Tab visible again – restart detection if camera is still active
       if (FaceAI.camera.isActive() && !FaceAI.detection.isRunning()) {
         FaceAI.detection.start(FaceAI.ui.getVideoElement()).catch(() => {});
         console.log("Detection resumed (tab visible)");
@@ -64,7 +91,6 @@
     FaceAI.capture.destroy();
     FaceAI.detection.stop();
     FaceAI.camera.stop();
-    // Bersihkan canvas dan preview
     if (FaceAI.drawing) {
       FaceAI.drawing.clear();
     }
@@ -74,6 +100,9 @@
     }
   }
 
+  // ==========================================
+  // Bootstrap
+  // ==========================================
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", init);
   } else {
