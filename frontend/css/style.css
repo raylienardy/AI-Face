@@ -576,3 +576,30 @@ body:not(.dev-mode) #status-camera {
   border-radius: 4px;
   transition: width 0.5s ease;
 }
+
+/* ---------- Animasi Skor (Fade In + Scale) ---------- */
+@keyframes scorePopIn {
+  0% {
+    transform: scale(0.5);
+    opacity: 0;
+  }
+  70% {
+    transform: scale(1.05);
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.report-overall-score-big {
+  animation: scorePopIn 0.5s ease-out;
+}
+
+/* ---------- Tombol yang Lebih Baik ---------- */
+.btn--secondary:hover {
+  background: #64748b;
+}
+.btn--primary:hover {
+  opacity: 0.9;
+}

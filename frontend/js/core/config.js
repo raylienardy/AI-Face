@@ -74,4 +74,7 @@ FaceAI.config = {
 
   // i18n
   DEFAULT_LANGUAGE: "en",
+
+  // UI Config (Fase 12.11)
+  SHOW_BOUNDING_BOX: true, // dapat dimatikan untuk tampilan lebih bersih
 };

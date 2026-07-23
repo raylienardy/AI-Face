@@ -164,7 +164,11 @@ FaceAI.detection = (function () {
       });
     });
 
-    FaceAI.ui.drawFaceBoxes(boxes);
+    if (FaceAI.config.SHOW_BOUNDING_BOX) {
+      FaceAI.ui.drawFaceBoxes(boxes);
+    } else {
+      FaceAI.ui.clearFaceBoxes();
+    }
     FaceAI.ui.updateFaceDot(true);
 
     // Jangan turunkan state jika sudah FACE_READY atau lebih tinggi
