@@ -127,24 +127,22 @@ FaceAI.capture = (function () {
     // Prevent double‑submit
     if (btn.disabled) return;
 
-    // Show spinner
-    btn.innerHTML = '<span class="spinner"></span> Uploading…';
+    // Tampilkan spinner
+    btn.innerHTML = '<span class="spinner"></span> Mengunggah…';
     btn.disabled = true;
 
     try {
       const response = await FaceAI.upload.send(canvas);
       console.log("Upload successful:", response);
       FaceAI.ui.showError("");
-      btn.textContent = "Uploaded ✓";
+      btn.textContent = "Tersimpan ✓";
       FaceAI.state.set("RESULT_READY");
-
-      // Fetch report using the returned filename
       const filename = response.filename;
       fetchReport(filename);
     } catch (error) {
       console.error("Upload failed:", error.message);
       FaceAI.ui.showError(error.message);
-      btn.textContent = "Retry Upload";
+      btn.textContent = "Coba Lagi";
       btn.disabled = false;
     }
   }
