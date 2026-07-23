@@ -113,31 +113,36 @@ FaceAI.history = (function () {
       const strengths = detail.strengths || [];
       const suggestions = report.suggestions || [];
 
+      const isDev = document.body.classList.contains("dev-mode");
       let html = `<h4>Analysis Detail</h4>
       <p><small>${formatDate(detail.timestamp)}</small></p>
       <p><strong>Overall Score:</strong> ${detail.overall_score?.toFixed(1)} (confidence: ${(detail.confidence * 100)?.toFixed(0)}%)</p>`;
 
-      const categories = [
-        { key: "face_structure", label: "Face Structure" },
-        { key: "eyes", label: "Eyes" },
-        { key: "eyebrows", label: "Eyebrows" },
-        { key: "nose", label: "Nose" },
-        { key: "mouth", label: "Mouth" },
-        { key: "jaw", label: "Jaw" },
-        { key: "cheek", label: "Cheeks" },
-        { key: "skin", label: "Skin" },
-      ];
-      for (const cat of categories) {
-        const catData = report[cat.key];
-        if (!catData) continue;
-        html += `<div><strong>${cat.label}</strong><div>`;
-        for (const [prop, val] of Object.entries(catData)) {
-          if (typeof val === "object" && val !== null && "value" in val) {
-            html += `<div class="report-score"><span>${prop}</span><span>${val.value.toFixed(1)}</span></div>`;
+      if (isDev) {
+        // Tampilkan semua kategori detail
+        const categories = [
+          { key: "face_structure", label: "Face Structure" },
+          { key: "eyes", label: "Eyes" },
+          { key: "eyebrows", label: "Eyebrows" },
+          { key: "nose", label: "Nose" },
+          { key: "mouth", label: "Mouth" },
+          { key: "jaw", label: "Jaw" },
+          { key: "cheek", label: "Cheeks" },
+          { key: "skin", label: "Skin" },
+        ];
+        for (const cat of categories) {
+          const catData = report[cat.key];
+          if (!catData) continue;
+          html += `<div><strong>${cat.label}</strong><div>`;
+          for (const [prop, val] of Object.entries(catData)) {
+            if (typeof val === "object" && val !== null && "value" in val) {
+              html += `<div class="report-score"><span>${prop}</span><span>${val.value.toFixed(1)}</span></div>`;
+            }
           }
+          html += `</div></div>`;
         }
-        html += `</div></div>`;
       }
+
       if (strengths.length) {
         html += `<div><strong>Strengths:</strong><ul>${strengths.map((s) => `<li>${s}</li>`).join("")}</ul></div>`;
       }

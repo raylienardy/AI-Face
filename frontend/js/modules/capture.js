@@ -181,53 +181,85 @@ FaceAI.capture = (function () {
     const content = document.getElementById("report-content");
     if (!container || !content) return;
 
-    let html = `
-      <div class="report-overall">
-        <span class="report-overall-label">Overall Attractiveness</span>
-        <span class="report-overall-score">${data.overall.value.toFixed(1)}</span>
-        <span class="report-overall-confidence">Confidence ${(data.overall.confidence * 100).toFixed(0)}%</span>
-      </div>
-      <div class="report-categories">
-    `;
-    const categories = [
-      { key: "face_structure", label: "Face Structure" },
-      { key: "eyes", label: "Eyes" },
-      { key: "eyebrows", label: "Eyebrows" },
-      { key: "nose", label: "Nose" },
-      { key: "mouth", label: "Mouth" },
-      { key: "jaw", label: "Jaw" },
-      { key: "cheek", label: "Cheeks" },
-      { key: "skin", label: "Skin" },
-    ];
-    for (const cat of categories) {
-      const catData = data[cat.key];
-      if (!catData) continue;
-      html += `<div class="report-category"><strong>${cat.label}</strong><div class="report-scores">`;
-      for (const [prop, val] of Object.entries(catData)) {
-        if (prop === "shape" && cat.key === "face_structure") continue;
-        if (typeof val === "object" && val !== null && "value" in val) {
-          html += `<div class="report-score"><span>${prop}</span><span>${val.value.toFixed(1)}</span></div>`;
+    const isDev = document.body.classList.contains("dev-mode");
+
+    if (isDev) {
+      // ===== MODE DEVELOPER: tampilan lengkap seperti sebelumnya =====
+      let html = `
+        <div class="report-overall">
+          <span class="report-overall-label">Overall Attractiveness</span>
+          <span class="report-overall-score">${data.overall.value.toFixed(1)}</span>
+          <span class="report-overall-confidence">Confidence ${(data.overall.confidence * 100).toFixed(0)}%</span>
+        </div>
+        <div class="report-categories">
+      `;
+      const categories = [
+        { key: "face_structure", label: "Face Structure" },
+        { key: "eyes", label: "Eyes" },
+        { key: "eyebrows", label: "Eyebrows" },
+        { key: "nose", label: "Nose" },
+        { key: "mouth", label: "Mouth" },
+        { key: "jaw", label: "Jaw" },
+        { key: "cheek", label: "Cheeks" },
+        { key: "skin", label: "Skin" },
+      ];
+      for (const cat of categories) {
+        const catData = data[cat.key];
+        if (!catData) continue;
+        html += `<div class="report-category"><strong>${cat.label}</strong><div class="report-scores">`;
+        for (const [prop, val] of Object.entries(catData)) {
+          if (prop === "shape" && cat.key === "face_structure") continue;
+          if (typeof val === "object" && val !== null && "value" in val) {
+            html += `<div class="report-score"><span>${prop}</span><span>${val.value.toFixed(1)}</span></div>`;
+          }
         }
+        html += `</div></div>`;
       }
-      html += `</div></div>`;
-    }
-    html += `</div>`; // tutup report-categories
+      html += `</div>`; // tutup report-categories
 
-    if (data.strengths && data.strengths.length > 0) {
-      html += `<div class="report-strengths"><strong>Strengths</strong><ul>`;
-      data.strengths.forEach((s) => (html += `<li>${s}</li>`));
-      html += `</ul></div>`;
-    }
-    if (data.suggestions && data.suggestions.length > 0) {
-      html += `<div class="report-suggestions"><strong>Suggestions</strong><ul>`;
-      data.suggestions.forEach((s) => (html += `<li>${s}</li>`));
-      html += `</ul></div>`;
+      if (data.strengths && data.strengths.length > 0) {
+        html += `<div class="report-strengths"><strong>Strengths</strong><ul>`;
+        data.strengths.forEach((s) => (html += `<li>${s}</li>`));
+        html += `</ul></div>`;
+      }
+      if (data.suggestions && data.suggestions.length > 0) {
+        html += `<div class="report-suggestions"><strong>Suggestions</strong><ul>`;
+        data.suggestions.forEach((s) => (html += `<li>${s}</li>`));
+        html += `</ul></div>`;
+      }
+      content.innerHTML = html;
+    } else {
+      // ===== MODE NORMAL: tampilan sederhana =====
+      const score = data.overall.value.toFixed(1);
+      const confidence = (data.overall.confidence * 100).toFixed(0);
+      let html = `
+        <div class="report-overall-simple">
+          <div class="report-overall-score-big">${score}</div>
+          <div class="report-score-bar">
+            <div class="report-score-bar-fill" style="width:${score}%"></div>
+          </div>
+          <div class="report-overall-label">Overall Attractiveness</div>
+          <div class="report-overall-confidence">Confidence ${confidence}%</div>
+        </div>
+      `;
+
+      if (data.strengths && data.strengths.length > 0) {
+        html += `<div class="report-strengths"><strong>Strengths</strong><ul>`;
+        data.strengths.forEach((s) => (html += `<li>${s}</li>`));
+        html += `</ul></div>`;
+      }
+      if (data.suggestions && data.suggestions.length > 0) {
+        html += `<div class="report-suggestions"><strong>Suggestions</strong><ul>`;
+        data.suggestions.forEach((s) => (html += `<li>${s}</li>`));
+        html += `</ul></div>`;
+      }
+      content.innerHTML = html;
     }
 
-    content.innerHTML = html;
     container.classList.add("visible"); // fade in
+    container.style.display = "block";
 
-    // Show View History button
+    // Tampilkan tombol View History (hanya jika belum ada)
     let viewBtn = document.getElementById("view-history-btn");
     if (!viewBtn) {
       viewBtn = document.createElement("button");
