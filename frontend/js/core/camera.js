@@ -94,6 +94,7 @@ window.FaceAI = window.FaceAI || {};
     FaceAI.ui.clearError();
     FaceAI.state.set("CAMERA_READY");
     FaceAI.ui.showUserGuidance(true);
+    FaceAI.ui.updateUserGuidance("Posisikan wajah di depan kamera");
     // Detect when camera is disconnected
     const videoTrack = stream.getVideoTracks()[0];
     if (videoTrack) {

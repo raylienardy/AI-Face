@@ -135,7 +135,7 @@ FaceAI.capture = (function () {
       const response = await FaceAI.upload.send(canvas);
       console.log("Upload successful:", response);
       FaceAI.ui.showError("");
-      btn.textContent = "Tersimpan ✓";
+      btn.textContent = "Selesai ✓";
       FaceAI.state.set("RESULT_READY");
       const filename = response.filename;
       fetchReport(filename);
@@ -287,7 +287,7 @@ FaceAI.capture = (function () {
     document.getElementById("start-camera-btn").style.display = "block";
     const continueBtn = document.getElementById("continue-btn");
     if (continueBtn) {
-      continueBtn.textContent = "Continue";
+      continueBtn.textContent = "Analisa";
       continueBtn.disabled = false;
     }
 
@@ -322,7 +322,7 @@ FaceAI.capture = (function () {
     const retakeBtn = document.getElementById("retake-btn");
     const continueBtn = document.getElementById("continue-btn");
     if (continueBtn) {
-      continueBtn.textContent = "Continue";
+      continueBtn.textContent = "Analisa";
       continueBtn.disabled = false;
     }
     if (retakeBtn) retakeBtn.addEventListener("click", onRetake);
