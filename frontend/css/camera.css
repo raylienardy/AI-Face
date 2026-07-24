@@ -5,7 +5,7 @@
   background: #000;
   border-radius: var(--border-radius);
   overflow: hidden;
-  border: 2px dashed var(--color-inactive);
+  /* border: 2px dashed var(--color-inactive); */
 }
 .camera-preview::before {
   content: "";

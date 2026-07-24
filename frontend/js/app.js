@@ -21,6 +21,44 @@
       canvas.addEventListener("webglcontextlost", onWebGLContextLost, false);
     }
 
+    // Isi dropdown kamera
+    FaceAI.camera
+      .getCameras()
+      .then((devices) => {
+        FaceAI.ui.populateCameraList(devices);
+      })
+      .catch(() => {});
+
+    // Event listener untuk pemilihan kamera
+    const cameraSelect = document.getElementById("camera-select");
+    if (cameraSelect) {
+      cameraSelect.addEventListener("change", (e) => {
+        FaceAI.config.SELECTED_CAMERA_ID = e.target.value;
+        // Jika kamera sedang aktif, restart dengan kamera baru
+        if (FaceAI.camera.isActive()) {
+          FaceAI.camera.stop();
+          FaceAI.detection.stop();
+          FaceAI.camera.start().then(() => {
+            const video = FaceAI.ui.getVideoElement();
+            FaceAI.detection.start(video);
+          });
+        }
+      });
+    }
+
+    // Event listener untuk mirror toggle
+    const mirrorToggle = document.getElementById("mirror-toggle");
+    if (mirrorToggle) {
+      mirrorToggle.checked = FaceAI.config.MIRROR_ENABLED;
+      mirrorToggle.addEventListener("change", (e) => {
+        FaceAI.config.MIRROR_ENABLED = e.target.checked;
+        FaceAI.ui.setMirror(e.target.checked);
+      });
+    }
+
+    // Tampilkan kontrol kamera
+    FaceAI.ui.showCameraControls(true);
+
     // Cleanup when page is closed or tab hidden
     window.addEventListener("beforeunload", cleanup);
     document.addEventListener("visibilitychange", onVisibilityChange);

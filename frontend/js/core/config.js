@@ -81,4 +81,6 @@ FaceAI.config = {
   // Camera preferences (Fase 12.13-14)
   SELECTED_CAMERA_ID: null, // null = default
   MIRROR_ENABLED: true,
+
+  SHOW_BOUNDING_BOX: false, // sebelumnya true
 };
