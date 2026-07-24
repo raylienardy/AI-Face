@@ -38,6 +38,13 @@ window.FaceAI = window.FaceAI || {};
       }
     },
 
+    showUserGuidance(show) {
+      const el = document.getElementById("user-guidance");
+      if (el) {
+        el.classList.toggle("active", show);
+      }
+    },
+
     showPlaceholder() {
       ui.placeholder.classList.remove("hidden");
     },
