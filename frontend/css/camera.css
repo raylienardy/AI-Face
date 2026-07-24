@@ -102,3 +102,8 @@
   padding: 0.5rem 1.5rem;
   border-radius: 12px;
 }
+
+.capture-buttons .btn {
+  white-space: nowrap;
+  flex-shrink: 0;
+}

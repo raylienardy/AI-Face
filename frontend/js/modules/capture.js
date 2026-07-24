@@ -175,6 +175,8 @@ FaceAI.capture = (function () {
   }
 
   function displayReport(data) {
+    // Sembunyikan tombol Mulai Kamera
+    document.getElementById("start-camera-btn").style.display = "none";
     const container = document.getElementById("report-container");
     const content = document.getElementById("report-content");
     if (!container || !content) return;
@@ -281,6 +283,7 @@ FaceAI.capture = (function () {
   // ==========================================
   function onRetake() {
     // Reset tombol Continue
+    document.getElementById("start-camera-btn").style.display = "block";
     const continueBtn = document.getElementById("continue-btn");
     if (continueBtn) {
       continueBtn.textContent = "Continue";
