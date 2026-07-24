@@ -3,7 +3,7 @@
   background: var(--color-surface);
   border-radius: var(--border-radius);
   padding: 1.5rem;
-  margin-top: 1rem;
+  margin-top: 0; /* << ubah dari 1rem ke 0 */
   color: var(--color-text);
   transition: opacity 0.3s;
   opacity: 0;

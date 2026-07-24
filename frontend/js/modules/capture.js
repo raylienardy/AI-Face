@@ -176,6 +176,7 @@ FaceAI.capture = (function () {
 
   function displayReport(data) {
     // Sembunyikan tombol Mulai Kamera
+    FaceAI.ui.showUserGuidance(false);
     document.getElementById("start-camera-btn").style.display = "none";
     const container = document.getElementById("report-container");
     const content = document.getElementById("report-content");
