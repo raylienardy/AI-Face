@@ -192,6 +192,33 @@ window.FaceAI = window.FaceAI || {};
       if (el) el.textContent = text;
     },
 
+    populateCameraList(devices) {
+      const select = document.getElementById("camera-select");
+      if (!select) return;
+      select.innerHTML = "";
+      devices.forEach((device, idx) => {
+        const option = document.createElement("option");
+        option.value = device.deviceId;
+        option.textContent = device.label || `Kamera ${idx + 1}`;
+        if (device.deviceId === FaceAI.config.SELECTED_CAMERA_ID) {
+          option.selected = true;
+        }
+        select.appendChild(option);
+      });
+    },
+
+    showCameraControls(show) {
+      const el = document.getElementById("camera-controls");
+      if (el) el.style.display = show ? "flex" : "none";
+    },
+
+    setMirror(enabled) {
+      const video = document.getElementById("camera-video");
+      if (video) {
+        video.style.transform = enabled ? "scaleX(-1)" : "scaleX(1)";
+      }
+    },
+
     showToast(message) {
       // Hapus toast sebelumnya jika ada
       const old = document.getElementById("toast");

@@ -107,3 +107,38 @@
   white-space: nowrap;
   flex-shrink: 0;
 }
+
+/* Camera Controls */
+.camera-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-surface);
+  border-radius: var(--border-radius);
+  padding: 1rem;
+  margin-top: 0.5rem;
+}
+.control-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--color-text);
+  font-size: var(--font-size-sm);
+}
+.camera-select {
+  background: var(--color-bg);
+  color: var(--color-text);
+  border: 1px solid var(--color-inactive);
+  border-radius: 6px;
+  padding: 0.3rem 0.5rem;
+  font-size: var(--font-size-sm);
+}
+.mirror-label {
+  cursor: pointer;
+  user-select: none;
+}
+#mirror-toggle {
+  cursor: pointer;
+}

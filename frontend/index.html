@@ -127,6 +127,19 @@
         Mulai Kamera
       </button>
 
+      <!-- Camera Controls (Fase 12.13-14) -->
+      <div class="camera-controls" id="camera-controls" style="display: none">
+        <div class="control-row">
+          <label for="camera-select">📷 Kamera</label>
+          <select id="camera-select" class="camera-select"></select>
+        </div>
+        <div class="control-row">
+          <label class="mirror-label">
+            <input type="checkbox" id="mirror-toggle" checked /> Mirror
+          </label>
+        </div>
+      </div>
+
       <!-- Pesan error -->
       <p class="camera-error" id="camera-error" role="alert"></p>
 

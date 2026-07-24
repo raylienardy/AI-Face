@@ -77,4 +77,8 @@ FaceAI.config = {
 
   // UI Config (Fase 12.11)
   SHOW_BOUNDING_BOX: true, // dapat dimatikan untuk tampilan lebih bersih
+
+  // Camera preferences (Fase 12.13-14)
+  SELECTED_CAMERA_ID: null, // null = default
+  MIRROR_ENABLED: true,
 };

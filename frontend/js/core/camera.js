@@ -36,6 +36,11 @@ window.FaceAI = window.FaceAI || {};
       return state.isStarting;
     },
 
+    async getCameras() {
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      return devices.filter((d) => d.kind === "videoinput");
+    },
+
     async start() {
       if (state.isStarting || state.isActive) return;
 
@@ -48,14 +53,24 @@ window.FaceAI = window.FaceAI || {};
           throw new Error("NOT_SUPPORTED");
         }
 
-        const stream = await navigator.mediaDevices.getUserMedia({
+        const constraints = {
           video: {
-            width: { ideal: CONFIG.CAMERA_WIDTH },
-            height: { ideal: CONFIG.CAMERA_HEIGHT },
-            facingMode: CONFIG.CAMERA_FACING_MODE,
+            width: { ideal: FaceAI.config.CAMERA_WIDTH },
+            height: { ideal: FaceAI.config.CAMERA_HEIGHT },
+            facingMode: FaceAI.config.CAMERA_FACING_MODE,
           },
           audio: false,
-        });
+        };
+
+        // Jika ada device ID spesifik, gunakan
+        if (FaceAI.config.SELECTED_CAMERA_ID) {
+          constraints.video.deviceId = {
+            exact: FaceAI.config.SELECTED_CAMERA_ID,
+          };
+          delete constraints.video.facingMode; // deviceId lebih spesifik
+        }
+
+        const stream = await navigator.mediaDevices.getUserMedia(constraints);
 
         handleStream(stream);
       } catch (error) {
@@ -87,6 +102,7 @@ window.FaceAI = window.FaceAI || {};
     video.onloadedmetadata = () => {
       video.play().catch((err) => console.warn("Video play failed:", err));
     };
+    FaceAI.ui.setMirror(FaceAI.config.MIRROR_ENABLED);
 
     FaceAI.ui.hidePlaceholder();
     FaceAI.ui.setButtonActive(true);
