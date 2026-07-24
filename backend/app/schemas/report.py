@@ -76,3 +76,4 @@ class Report(BaseModel):
 
 class ReportResponse(Report):
     analysis_id: str
+    feature_scores: dict = {}

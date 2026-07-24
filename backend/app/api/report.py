@@ -4,7 +4,10 @@ import logging
 from fastapi import APIRouter, Query, HTTPException
 from app.services.landmark_extractor import extract_landmarks
 from app.services.geometry_analyzer import analyze_face_structure
-from app.services.region_analyzer import analyze_eyes, analyze_eyebrows, analyze_nose, analyze_mouth, analyze_jaw, analyze_cheek
+from app.services.region_analyzer import (
+    analyze_eyes, analyze_eyebrows, analyze_nose,
+    analyze_mouth, analyze_jaw, analyze_cheek
+)
 from app.services.skin_analyzer import analyze_skin
 from app.services.aggregator import aggregate_scores
 from app.services.report_builder import generate_strengths_suggestions
@@ -34,10 +37,9 @@ def _num(value, default=50.0):
     except:
         return default
 
-def generate_report_from_file(file_path: str) -> Report:
+def generate_report_from_file(file_path: str) -> (Report, dict):
     """
-    Membaca gambar dari disk, menjalankan seluruh pipeline analisis,
-    dan mengembalikan objek Report lengkap.
+    Mengembalikan tuple (Report, feature_scores_dict).
     """
     img = cv2.imread(file_path)
     if img is None:
@@ -62,6 +64,7 @@ def generate_report_from_file(file_path: str) -> Report:
     skin = _safe_region_analysis(img, landmarks, analyze_skin)
 
     overall = aggregate_scores(geometry, regions, skin)
+    feature_scores = overall.get('feature_scores', {})
 
     def make_feature(val, conf=None):
         return FeatureScore(value=_num(val), confidence=conf)
@@ -112,8 +115,10 @@ def generate_report_from_file(file_path: str) -> Report:
             skin_texture=make_feature(skin.get("skin_texture")),
             skin_tone=make_feature(skin.get("skin_tone"))
         ),
-        overall=FeatureScore(value=_num(overall.get("overall_attractiveness")),
-                             confidence=_num(overall.get("confidence"), 0.7))
+        overall=FeatureScore(
+            value=_num(overall.get("overall_attractiveness")),
+            confidence=_num(overall.get("confidence"), 0.7)
+        )
     )
 
     # Strengths & suggestions
@@ -146,46 +151,40 @@ def generate_report_from_file(file_path: str) -> Report:
     strengths, suggestions = generate_strengths_suggestions(score_dict)
     report.strengths = strengths
     report.suggestions = suggestions
-    return report
+    return report, feature_scores
 
 
 @router.get("/report", response_model=ReportResponse)
 async def get_report(file: str = Query(..., description="Filename hasil upload")):
-    """
-    Menghasilkan laporan analisis kecantikan untuk file yang sudah diunggah.
-    Menyimpan laporan ke history secara otomatis.
-    """
     file_path = os.path.join(UPLOAD_DIR, file)
     if not os.path.exists(file_path):
         raise HTTPException(404, f"File '{file}' tidak ditemukan di server")
 
     try:
-        report = generate_report_from_file(file_path)
+        report, feature_scores = generate_report_from_file(file_path)
 
         analysis_id = ""
         if config.ENABLE_HISTORY:
-          # Simpan ke history
-          history_service = HistoryService()
-          # Beri image_path sesuai config
-          image_path_for_db = file_path if config.ENABLE_HISTORY_IMAGES else ""
-          analysis_id = history_service.create(
-              image_path=image_path_for_db,
-              report=report,
-              model_version=config.MODEL_VERSION,
-              preprocessing_version=config.PREPROCESSING_VERSION
-          )
+            history_service = HistoryService()
+            image_path_for_db = file_path if config.ENABLE_HISTORY_IMAGES else ""
+            analysis_id = history_service.create(
+                image_path=image_path_for_db,
+                report=report,
+                model_version=config.MODEL_VERSION,
+                preprocessing_version=config.PREPROCESSING_VERSION
+            )
 
-        # Jika gambar tidak disimpan, hapus file dari uploads
         if not config.ENABLE_HISTORY_IMAGES:
             try:
                 os.remove(file_path)
-                logger.info("Image removed after analysis (history images disabled)")
+                logger.info("Image removed after analysis")
             except Exception as e:
                 logger.warning(f"Failed to remove uploaded image: {e}")
 
         response = ReportResponse(
             **report.model_dump(),
-            analysis_id=analysis_id
+            analysis_id=analysis_id,
+            feature_scores=feature_scores
         )
         return response
 
