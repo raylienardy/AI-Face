@@ -93,6 +93,7 @@ window.FaceAI = window.FaceAI || {};
     FaceAI.ui.updateCameraDot(true);
     FaceAI.ui.clearError();
     FaceAI.state.set("CAMERA_READY");
+    FaceAI.ui.showUserGuidance(true);
     // Detect when camera is disconnected
     const videoTrack = stream.getVideoTracks()[0];
     if (videoTrack) {
@@ -138,5 +139,6 @@ window.FaceAI = window.FaceAI || {};
     FaceAI.ui.updateCameraDot(false);
     FaceAI.ui.showPlaceholder();
     FaceAI.ui.setButtonActive(false);
+    FaceAI.ui.showUserGuidance(false);
   }
 })();

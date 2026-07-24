@@ -1,0 +1,22 @@
+@media (max-width: 600px) {
+  .main {
+    max-width: 100%;
+    padding: 0 0.5rem;
+  }
+  .header__title {
+    font-size: var(--font-size-xl);
+  }
+  .report-categories {
+    grid-template-columns: 1fr;
+  }
+  .system-status {
+    gap: 1rem;
+    flex-wrap: wrap;
+  }
+  .camera-preview::before {
+    padding-top: 75%;
+  }
+  .countdown-overlay__text {
+    font-size: 3rem;
+  }
+}

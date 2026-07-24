@@ -1,23 +1,20 @@
-<!--
-========================================
-FaceAI
-Milestone 12 – Stage 12.7
-UI & Performance Final
-Version 0.1
-========================================
--->
 <!doctype html>
-<html lang="en">
+<html lang="id">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>FaceAI - Face Intelligence Platform</title>
-    <!-- Allow eval for MediaPipe (development only) -->
     <meta
       http-equiv="Content-Security-Policy"
       content="default-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data:; media-src 'self'; connect-src *;"
     />
-    <link rel="stylesheet" href="css/style.css" />
+    <link rel="stylesheet" href="css/base.css" />
+    <link rel="stylesheet" href="css/components.css" />
+    <link rel="stylesheet" href="css/camera.css" />
+    <link rel="stylesheet" href="css/report.css" />
+    <link rel="stylesheet" href="css/developer.css" />
+    <link rel="stylesheet" href="css/animations.css" />
+    <link rel="stylesheet" href="css/responsive.css" />
     <script
       src="https://cdn.jsdelivr.net/npm/@mediapipe/face_detection@0.4.1646425229/face_detection.js"
       crossorigin="anonymous"
@@ -30,11 +27,11 @@ Version 0.1
     </header>
 
     <main class="main" role="main">
-      <!-- Backend Status -->
+      <!-- Backend Status (hanya developer) -->
       <section
-        class="status-panel"
+        class="status-panel dev-only"
         id="backend-status"
-        aria-label="Backend status"
+        aria-label="Status backend"
       >
         <h2 class="status-panel__title">Backend Status</h2>
         <p class="status-panel__value status-panel__value--disconnected">
@@ -42,7 +39,7 @@ Version 0.1
         </p>
       </section>
 
-      <!-- User Guidance (Fase 12.13) -->
+      <!-- Panduan pengguna (hanya muncul saat kamera aktif) -->
       <div id="user-guidance" class="user-guidance" aria-live="polite">
         <p id="guidance-text"></p>
       </div>
@@ -51,31 +48,51 @@ Version 0.1
       <section
         class="camera-preview"
         id="camera-preview"
-        aria-label="Camera preview"
+        aria-label="Pratinjau kamera"
       >
         <video id="camera-video" autoplay playsinline muted></video>
         <canvas id="face-canvas" aria-hidden="true"></canvas>
         <div class="camera-preview__placeholder" id="camera-placeholder">
-          <p class="camera-preview__text">Camera Not Started</p>
+          <p class="camera-preview__text">Kamera belum dimulai</p>
         </div>
-        <!-- Countdown Overlay -->
+
+        <!-- Overlay hitung mundur -->
         <div id="countdown-overlay" class="countdown-overlay">
           <span id="countdown-text" class="countdown-overlay__text"></span>
         </div>
-        <!-- Preview Image -->
+
+        <!-- Gambar hasil capture -->
         <img
           id="capture-preview"
           class="capture-preview-img"
           style="display: none"
-          alt="Captured face"
+          alt="Hasil foto"
         />
+
+        <!-- Tombol capture (pindah ke dalam camera-preview) -->
+        <div id="capture-buttons" class="capture-buttons" style="display: none">
+          <button
+            id="retake-btn"
+            class="btn btn--secondary"
+            aria-label="Ulangi foto"
+          >
+            Foto Ulang
+          </button>
+          <button
+            id="continue-btn"
+            class="btn btn--primary"
+            aria-label="Nilai sekarang"
+          >
+            Nilai
+          </button>
+        </div>
       </section>
 
-      <!-- System Status Indicators -->
+      <!-- Indikator sistem (hanya developer) -->
       <section
-        class="system-status"
+        class="system-status dev-only"
         id="system-status"
-        aria-label="System status"
+        aria-label="Status sistem"
       >
         <div class="system-status__item" id="status-backend">
           <span class="system-status__label">Backend</span>
@@ -91,31 +108,32 @@ Version 0.1
         </div>
       </section>
 
-      <!-- Alignment Preview -->
+      <!-- Preview alignment (hanya developer) -->
       <div
-        class="align-preview"
         id="align-preview"
-        aria-label="Aligned face preview"
+        class="align-preview dev-only"
+        aria-label="Pratinjau wajah ter-align"
       >
         <canvas id="align-canvas" width="150" height="150"></canvas>
         <span class="align-preview__label">Aligned</span>
       </div>
 
-      <!-- Action Button -->
+      <!-- Tombol mulai kamera -->
       <button
         class="btn btn--primary"
         id="start-camera-btn"
-        aria-label="Start Camera"
+        aria-label="Mulai kamera"
       >
-        Start Camera
+        Mulai Kamera
       </button>
 
-      <!-- Camera Error Message -->
+      <!-- Pesan error -->
       <p class="camera-error" id="camera-error" role="alert"></p>
 
-      <!-- Ready Indicator -->
+      <!-- Indikator siap (hanya developer) -->
       <div
         id="ready-indicator"
+        class="dev-only"
         style="display: none; text-align: center"
         aria-live="polite"
       >
@@ -124,11 +142,12 @@ Version 0.1
         </div>
       </div>
 
-      <!-- Quality Debug -->
+      <!-- Panel debug kualitas (hanya developer) -->
       <div
         id="quality-debug"
+        class="dev-only"
         style="display: none"
-        aria-label="Quality debug information"
+        aria-label="Informasi debug kualitas"
       >
         <strong>Quality Debug</strong>
         <pre
@@ -141,50 +160,32 @@ Version 0.1
         ></pre>
       </div>
 
-      <!-- Capture Buttons -->
-      <div id="capture-buttons" class="capture-buttons" style="display: none">
-        <button
-          id="retake-btn"
-          class="btn btn--secondary"
-          aria-label="Retake photo"
-        >
-          Foto Ulang
-        </button>
-        <button
-          id="continue-btn"
-          class="btn btn--primary"
-          aria-label="Continue to analysis"
-        >
-          Nilai
-        </button>
-      </div>
-
-      <!-- Report Container -->
+      <!-- Laporan analisis -->
       <div
         id="report-container"
         class="report-container"
         style="display: none"
-        aria-label="Analysis report"
+        aria-label="Laporan analisis"
       >
-        <h2>Face Analysis Report</h2>
+        <h2>Laporan Analisis Wajah</h2>
         <div id="report-content"></div>
       </div>
 
-      <!-- History Panel -->
+      <!-- Panel riwayat (hanya developer) -->
       <div
         id="history-panel"
-        class="history-panel"
+        class="history-panel dev-only"
         style="display: none"
-        aria-label="Analysis history"
+        aria-label="Riwayat analisis"
       >
         <div class="history-header">
-          <h3>Analysis History</h3>
+          <h3>Riwayat Analisis</h3>
           <button
             id="close-history-btn"
             class="btn btn--small"
-            aria-label="Close history"
+            aria-label="Tutup riwayat"
           >
-            Close
+            Tutup
           </button>
         </div>
         <div id="history-list"></div>
@@ -192,7 +193,6 @@ Version 0.1
       </div>
     </main>
 
-    <!-- Scripts -->
     <script src="js/core/config.js"></script>
     <script src="js/utils/helpers.js"></script>
     <script src="js/utils/geometry.js"></script>
