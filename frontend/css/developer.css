@@ -1,0 +1,9 @@
+/* Mode Developer – sembunyikan dari tampilan normal */
+body:not(.dev-mode) .dev-only {
+  display: none !important;
+}
+
+/* Ready indicator (hanya developer) */
+body:not(.dev-mode) #ready-indicator {
+  display: none !important;
+}
