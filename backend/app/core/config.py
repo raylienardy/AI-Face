@@ -25,3 +25,8 @@ PREPROCESSING_VERSION = "align-eyes-letterbox-224-v1"
 ENABLE_HISTORY_IMAGES = False
 # History feature toggle (Fase 12.12)
 ENABLE_HISTORY = False
+
+# AI Provider
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
+GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
+AI_PROVIDER_ORDER = os.getenv("AI_PROVIDER_ORDER", "gemini,groq,mock").split(",")

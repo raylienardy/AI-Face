@@ -18,6 +18,8 @@ from app.schemas.report import (
     JawReport, CheekReport, SkinReport, ReportResponse
 )
 from app.core import config
+from app.services.face_data_extractor import extract_face_data
+
 
 logger = logging.getLogger("faceai.api.report")
 router = APIRouter(prefix="/api")
@@ -38,121 +40,87 @@ def _num(value, default=50.0):
         return default
 
 def generate_report_from_file(file_path: str) -> (Report, dict):
-    """
-    Mengembalikan tuple (Report, feature_scores_dict).
-    """
     img = cv2.imread(file_path)
     if img is None:
         raise HTTPException(400, "Cannot read image file")
 
-    landmarks = extract_landmarks(img)
-    if landmarks is None:
-        raise HTTPException(422, "No face detected in the uploaded image")
+    # Ekstrak data wajah untuk AI (geometry, regions, skin, embedding, measurements)
+    face_data = extract_face_data(img)
+    if "error" in face_data:
+        raise HTTPException(422, face_data["error"])
 
-    # Geometry
-    geometry = analyze_face_structure(landmarks)
+    # Panggil AI provider untuk mendapatkan analisis lengkap
+    overall = aggregate_scores(
+        face_data.get("geometry", {}),
+        face_data.get("regions", {}),
+        face_data.get("skin", {}),
+        face_data
+    )
 
-    # Regions
-    regions = {
-        "eyes": _safe_region_analysis(img, landmarks, analyze_eyes),
-        "eyebrows": _safe_region_analysis(img, landmarks, analyze_eyebrows),
-        "nose": _safe_region_analysis(img, landmarks, analyze_nose),
-        "mouth": _safe_region_analysis(img, landmarks, analyze_mouth),
-        "jaw": _safe_region_analysis(img, landmarks, analyze_jaw),
-        "cheek": _safe_region_analysis(img, landmarks, analyze_cheek),
-    }
-    skin = _safe_region_analysis(img, landmarks, analyze_skin)
-
-    overall = aggregate_scores(geometry, regions, skin)
-    feature_scores = overall.get('feature_scores', {})
+    # Ambil feature_scores dari hasil AI
+    feature_scores = overall.get("feature_scores", {})
+    strengths = overall.get("strengths", [])
+    suggestions = overall.get("suggestions", [])
 
     def make_feature(val, conf=None):
         return FeatureScore(value=_num(val), confidence=conf)
 
+    # Bangun Report menggunakan data dari AI
     report = Report(
         face_structure=FaceStructure(
             shape=ShapeScores(
-                oval=_num(geometry["face_shape"].get("oval")),
-                round=_num(geometry["face_shape"].get("round")),
-                square=_num(geometry["face_shape"].get("square")),
-                heart=_num(geometry["face_shape"].get("heart"))
+                oval=_num(face_data["geometry"]["face_shape"].get("oval", 50)),
+                round=_num(face_data["geometry"]["face_shape"].get("round", 50)),
+                square=_num(face_data["geometry"]["face_shape"].get("square", 50)),
+                heart=_num(face_data["geometry"]["face_shape"].get("heart", 50))
             ),
-            symmetry=make_feature(geometry.get("symmetry")),
-            harmony=make_feature(geometry.get("harmony"))
+            symmetry=make_feature(feature_scores.get("facial_symmetry", {}).get("score", 50)),
+            harmony=make_feature(feature_scores.get("facial_harmony", {}).get("score", 50))
         ),
         eyes=EyesReport(
-            right_eye=make_feature(regions["eyes"].get("right_eye")),
-            left_eye=make_feature(regions["eyes"].get("left_eye")),
-            symmetry=make_feature(regions["eyes"].get("symmetry"))
+            right_eye=make_feature(feature_scores.get("eyes", {}).get("score", 50)),
+            left_eye=make_feature(feature_scores.get("eyes", {}).get("score", 50)),
+            symmetry=make_feature(feature_scores.get("eyes", {}).get("score", 50))
         ),
         eyebrows=EyebrowsReport(
-            right_eyebrow=make_feature(regions["eyebrows"].get("right_eyebrow")),
-            left_eyebrow=make_feature(regions["eyebrows"].get("left_eyebrow")),
-            symmetry=make_feature(regions["eyebrows"].get("symmetry"))
+            right_eyebrow=make_feature(feature_scores.get("eyebrows", {}).get("score", 50)),
+            left_eyebrow=make_feature(feature_scores.get("eyebrows", {}).get("score", 50)),
+            symmetry=make_feature(feature_scores.get("eyebrows", {}).get("score", 50))
         ),
         nose=NoseReport(
-            nose_width=make_feature(regions["nose"].get("nose_width")),
-            nose_length=make_feature(regions["nose"].get("nose_length")),
-            nose_balance=make_feature(regions["nose"].get("nose_balance"))
+            nose_width=make_feature(feature_scores.get("nose", {}).get("score", 50)),
+            nose_length=make_feature(feature_scores.get("nose", {}).get("score", 50)),
+            nose_balance=make_feature(feature_scores.get("nose", {}).get("score", 50))
         ),
         mouth=MouthReport(
-            lip_shape=make_feature(regions["mouth"].get("lip_shape")),
-            lip_fullness=make_feature(regions["mouth"].get("lip_fullness")),
-            lip_symmetry=make_feature(regions["mouth"].get("lip_symmetry"))
+            lip_shape=make_feature(feature_scores.get("lips", {}).get("score", 50)),
+            lip_fullness=make_feature(feature_scores.get("lips", {}).get("score", 50)),
+            lip_symmetry=make_feature(feature_scores.get("lips", {}).get("score", 50))
         ),
         jaw=JawReport(
-            jawline=make_feature(regions["jaw"].get("jawline")),
-            chin=make_feature(regions["jaw"].get("chin")),
-            mandible=make_feature(regions["jaw"].get("mandible"))
+            jawline=make_feature(feature_scores.get("jaw", {}).get("score", 50)),
+            chin=make_feature(feature_scores.get("jaw", {}).get("score", 50)),
+            mandible=make_feature(feature_scores.get("jaw", {}).get("score", 50))
         ),
         cheek=CheekReport(
-            left_cheek=make_feature(regions["cheek"].get("left_cheek")),
-            right_cheek=make_feature(regions["cheek"].get("right_cheek")),
-            cheekbones=make_feature(regions["cheek"].get("cheekbones"))
+            left_cheek=make_feature(feature_scores.get("cheekbones", {}).get("score", 50)),
+            right_cheek=make_feature(feature_scores.get("cheekbones", {}).get("score", 50)),
+            cheekbones=make_feature(feature_scores.get("cheekbones", {}).get("score", 50))
         ),
         skin=SkinReport(
-            skin_quality=make_feature(skin.get("skin_quality")),
-            skin_texture=make_feature(skin.get("skin_texture")),
-            skin_tone=make_feature(skin.get("skin_tone"))
+            skin_quality=make_feature(feature_scores.get("skin", {}).get("score", 50)),
+            skin_texture=make_feature(feature_scores.get("skin", {}).get("score", 50)),
+            skin_tone=make_feature(feature_scores.get("skin", {}).get("score", 50))
         ),
         overall=FeatureScore(
-            value=_num(overall.get("overall_attractiveness")),
+            value=_num(overall.get("overall_score")),
             confidence=_num(overall.get("confidence"), 0.7)
         )
     )
 
-    # Strengths & suggestions
-    score_dict = {
-        "face_structure": {
-            "symmetry": report.face_structure.symmetry.value,
-            "harmony": report.face_structure.harmony.value
-        },
-        "eyes": {"symmetry": report.eyes.symmetry.value},
-        "eyebrows": {"symmetry": report.eyebrows.symmetry.value},
-        "mouth": {"lip_fullness": report.mouth.lip_fullness.value},
-        "jaw": {"jawline": report.jaw.jawline.value},
-        "cheek": {"cheekbones": report.cheek.cheekbones.value},
-        "skin": {
-            "skin_quality": report.skin.skin_quality.value,
-            "skin_texture": report.skin.skin_texture.value,
-            "skin_tone": report.skin.skin_tone.value
-        }
-    }
-    for cat in ["eyes", "eyebrows", "nose", "mouth", "jaw", "cheek"]:
-        if cat in regions and "error" not in regions[cat]:
-            for k, v in regions[cat].items():
-                if isinstance(v, (int, float)):
-                    score_dict.setdefault(cat, {})[k] = v
-    if "error" not in skin:
-        for k, v in skin.items():
-            if isinstance(v, (int, float)):
-                score_dict["skin"][k] = v
-
-    strengths, suggestions = generate_strengths_suggestions(score_dict)
     report.strengths = strengths
     report.suggestions = suggestions
     return report, feature_scores
-
 
 @router.get("/report", response_model=ReportResponse)
 async def get_report(file: str = Query(..., description="Filename hasil upload")):
