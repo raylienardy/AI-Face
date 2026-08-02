@@ -44,12 +44,12 @@ def generate_report_from_file(file_path: str) -> (Report, dict):
     if img is None:
         raise HTTPException(400, "Cannot read image file")
 
-    # Ekstrak data wajah untuk AI (geometry, regions, skin, embedding, measurements)
+    # Ekstrak data wajah untuk AI
     face_data = extract_face_data(img)
     if "error" in face_data:
         raise HTTPException(422, face_data["error"])
 
-    # Panggil AI provider untuk mendapatkan analisis lengkap
+    # Panggil AI provider untuk analisis
     overall = aggregate_scores(
         face_data.get("geometry", {}),
         face_data.get("regions", {}),
@@ -57,15 +57,27 @@ def generate_report_from_file(file_path: str) -> (Report, dict):
         face_data
     )
 
-    # Ambil feature_scores dari hasil AI
-    feature_scores = overall.get("feature_scores", {})
+    # Ambil feature_scores mentah dari AI
+    raw_features = overall.get("feature_scores", {})
+
+    # Mapping ke format yang diharapkan frontend {value, confidence}
+    mapped_features = {}
+    for key, val in raw_features.items():
+        if isinstance(val, dict):
+            mapped_features[key] = {
+                "value": val.get("score", val.get("value", 50)),
+                "confidence": val.get("confidence", 0.7)
+            }
+        else:
+            mapped_features[key] = {"value": 50, "confidence": 0.7}
+
     strengths = overall.get("strengths", [])
     suggestions = overall.get("suggestions", [])
 
     def make_feature(val, conf=None):
         return FeatureScore(value=_num(val), confidence=conf)
 
-    # Bangun Report menggunakan data dari AI
+    # Bangun Report
     report = Report(
         face_structure=FaceStructure(
             shape=ShapeScores(
@@ -74,43 +86,43 @@ def generate_report_from_file(file_path: str) -> (Report, dict):
                 square=_num(face_data["geometry"]["face_shape"].get("square", 50)),
                 heart=_num(face_data["geometry"]["face_shape"].get("heart", 50))
             ),
-            symmetry=make_feature(feature_scores.get("facial_symmetry", {}).get("score", 50)),
-            harmony=make_feature(feature_scores.get("facial_harmony", {}).get("score", 50))
+            symmetry=make_feature(mapped_features.get("facial_symmetry", {}).get("value", 50)),
+            harmony=make_feature(mapped_features.get("facial_harmony", {}).get("value", 50))
         ),
         eyes=EyesReport(
-            right_eye=make_feature(feature_scores.get("eyes", {}).get("score", 50)),
-            left_eye=make_feature(feature_scores.get("eyes", {}).get("score", 50)),
-            symmetry=make_feature(feature_scores.get("eyes", {}).get("score", 50))
+            right_eye=make_feature(mapped_features.get("eyes", {}).get("value", 50)),
+            left_eye=make_feature(mapped_features.get("eyes", {}).get("value", 50)),
+            symmetry=make_feature(mapped_features.get("eyes", {}).get("value", 50))
         ),
         eyebrows=EyebrowsReport(
-            right_eyebrow=make_feature(feature_scores.get("eyebrows", {}).get("score", 50)),
-            left_eyebrow=make_feature(feature_scores.get("eyebrows", {}).get("score", 50)),
-            symmetry=make_feature(feature_scores.get("eyebrows", {}).get("score", 50))
+            right_eyebrow=make_feature(mapped_features.get("eyebrows", {}).get("value", 50)),
+            left_eyebrow=make_feature(mapped_features.get("eyebrows", {}).get("value", 50)),
+            symmetry=make_feature(mapped_features.get("eyebrows", {}).get("value", 50))
         ),
         nose=NoseReport(
-            nose_width=make_feature(feature_scores.get("nose", {}).get("score", 50)),
-            nose_length=make_feature(feature_scores.get("nose", {}).get("score", 50)),
-            nose_balance=make_feature(feature_scores.get("nose", {}).get("score", 50))
+            nose_width=make_feature(mapped_features.get("nose", {}).get("value", 50)),
+            nose_length=make_feature(mapped_features.get("nose", {}).get("value", 50)),
+            nose_balance=make_feature(mapped_features.get("nose", {}).get("value", 50))
         ),
         mouth=MouthReport(
-            lip_shape=make_feature(feature_scores.get("lips", {}).get("score", 50)),
-            lip_fullness=make_feature(feature_scores.get("lips", {}).get("score", 50)),
-            lip_symmetry=make_feature(feature_scores.get("lips", {}).get("score", 50))
+            lip_shape=make_feature(mapped_features.get("lips", {}).get("value", 50)),
+            lip_fullness=make_feature(mapped_features.get("lips", {}).get("value", 50)),
+            lip_symmetry=make_feature(mapped_features.get("lips", {}).get("value", 50))
         ),
         jaw=JawReport(
-            jawline=make_feature(feature_scores.get("jaw", {}).get("score", 50)),
-            chin=make_feature(feature_scores.get("jaw", {}).get("score", 50)),
-            mandible=make_feature(feature_scores.get("jaw", {}).get("score", 50))
+            jawline=make_feature(mapped_features.get("jaw", {}).get("value", 50)),
+            chin=make_feature(mapped_features.get("jaw", {}).get("value", 50)),
+            mandible=make_feature(mapped_features.get("jaw", {}).get("value", 50))
         ),
         cheek=CheekReport(
-            left_cheek=make_feature(feature_scores.get("cheekbones", {}).get("score", 50)),
-            right_cheek=make_feature(feature_scores.get("cheekbones", {}).get("score", 50)),
-            cheekbones=make_feature(feature_scores.get("cheekbones", {}).get("score", 50))
+            left_cheek=make_feature(mapped_features.get("cheekbones", {}).get("value", 50)),
+            right_cheek=make_feature(mapped_features.get("cheekbones", {}).get("value", 50)),
+            cheekbones=make_feature(mapped_features.get("cheekbones", {}).get("value", 50))
         ),
         skin=SkinReport(
-            skin_quality=make_feature(feature_scores.get("skin", {}).get("score", 50)),
-            skin_texture=make_feature(feature_scores.get("skin", {}).get("score", 50)),
-            skin_tone=make_feature(feature_scores.get("skin", {}).get("score", 50))
+            skin_quality=make_feature(mapped_features.get("skin", {}).get("value", 50)),
+            skin_texture=make_feature(mapped_features.get("skin", {}).get("value", 50)),
+            skin_tone=make_feature(mapped_features.get("skin", {}).get("value", 50))
         ),
         overall=FeatureScore(
             value=_num(overall.get("overall_score")),
@@ -120,7 +132,7 @@ def generate_report_from_file(file_path: str) -> (Report, dict):
 
     report.strengths = strengths
     report.suggestions = suggestions
-    return report, feature_scores
+    return report, mapped_features
 
 @router.get("/report", response_model=ReportResponse)
 async def get_report(file: str = Query(..., description="Filename hasil upload")):
