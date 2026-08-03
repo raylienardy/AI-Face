@@ -7,7 +7,7 @@
 "use strict";
 
 FaceAI.history = (function () {
-  const API_BASE = "https://faceai-api.railway.app/api";
+  const API_BASE = "/api";
 
   // Referensi DOM
   const panel = document.getElementById("history-panel");

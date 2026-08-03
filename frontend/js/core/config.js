@@ -85,4 +85,9 @@ FaceAI.config = {
   SHOW_BOUNDING_BOX: false, // sebelumnya true
 
   BACKEND_UPLOAD_URL: "https://faceai-api.railway.app/api/upload",
+
+  // Ubah URL backend menjadi endpoint proxy Vercel
+  BACKEND_UPLOAD_URL: "/api/upload",
+  BACKEND_REPORT_URL: "/api/report",
+  BACKEND_HISTORY_URL: "/api/history",
 };

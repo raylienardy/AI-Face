@@ -163,7 +163,7 @@ FaceAI.capture = (function () {
       content.innerHTML = '<p class="loading-text">Menganalisis…</p>';
     }
 
-    const reportUrl = `http://localhost:8000/api/report?file=${encodeURIComponent(filename)}`;
+    const reportUrl = `/api/report?file=${filename}`;
     try {
       const res = await fetch(reportUrl);
       if (!res.ok) {
