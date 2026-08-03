@@ -69,7 +69,7 @@
     FaceAI.ui.setDevMode(devMode);
 
     // Cek koneksi backend
-    checkBackendConnection();
+    // checkBackendConnection();
 
     // Kombinasi rahasia: Ctrl+Shift+D
     window.addEventListener("keydown", (e) => {
