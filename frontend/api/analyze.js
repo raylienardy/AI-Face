@@ -143,35 +143,42 @@ export default async function handler(req) {
 
     let result = null;
     let usedProvider = "";
+    const errors = []; // <-- kumpulkan error di sini
 
-    // Coba Gemini dulu
+    // 1. Coba Gemini
     try {
       const geminiKey = process.env.GEMINI_API_KEY;
       if (geminiKey) {
         result = await tryGemini(base64Image, mimeType, geminiKey);
         usedProvider = "gemini";
+      } else {
+        errors.push("Gemini API key not set");
       }
     } catch (e) {
-      console.error("Gemini failed:", e.message);
+      errors.push(`Gemini: ${e.message}`);
     }
 
-    // Fallback ke Groq
+    // 2. Fallback ke Groq
     if (!result) {
       try {
         const groqKey = process.env.GROQ_API_KEY;
         if (groqKey) {
           result = await tryGroq(base64Image, mimeType, groqKey);
           usedProvider = "groq";
+        } else {
+          errors.push("Groq API key not set");
         }
       } catch (e) {
-        console.error("Groq failed:", e.message);
+        errors.push(`Groq: ${e.message}`);
       }
     }
 
     if (!result) {
+      // Kembalikan detail error
       return new Response(
         JSON.stringify({
           error: "Semua AI provider sedang sibuk. Silakan coba lagi nanti.",
+          debug: errors,
         }),
         {
           status: 503,
@@ -186,7 +193,6 @@ export default async function handler(req) {
       headers: { "Content-Type": "application/json" },
     });
   } catch (error) {
-    console.error("Analyze error:", error);
     return new Response(JSON.stringify({ error: error.message }), {
       status: 500,
       headers: { "Content-Type": "application/json" },
