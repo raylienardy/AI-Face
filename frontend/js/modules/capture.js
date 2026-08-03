@@ -130,38 +130,40 @@ FaceAI.capture = (function () {
 
     const btn = document.getElementById("continue-btn");
     if (!btn) return;
-
     if (btn.disabled) return;
 
     btn.innerHTML = '<span class="spinner"></span> Menganalisis…';
     btn.disabled = true;
 
     try {
-      // Konversi canvas ke Blob
       const blob = await new Promise((resolve) =>
         canvas.toBlob(resolve, "image/jpeg", 0.9),
       );
       const formData = new FormData();
       formData.append("file", blob, "capture.jpg");
 
-      // Panggil fungsi analyze langsung
-      const response = await fetch(FaceAI.config.ANALYZE_URL, {
+      const response = await fetch("/api/analyze", {
         method: "POST",
         body: formData,
       });
 
+      const data = await response.json();
+
       if (!response.ok) {
-        const err = await response.json();
-        throw new Error(err.error || `Server error: ${response.status}`);
+        // Tampilkan error + debug
+        let errorMsg = data.error || "Unknown error";
+        if (data.debug && Array.isArray(data.debug)) {
+          errorMsg += "\n" + data.debug.join("\n");
+        }
+        throw new Error(errorMsg);
       }
 
-      const reportData = await response.json();
-      console.log("Analysis successful:", reportData);
+      console.log("Analysis successful:", data);
       FaceAI.ui.showError("");
       btn.textContent = "Selesai ✓";
       btn.disabled = true;
       FaceAI.state.set("RESULT_READY");
-      displayReport(reportData);
+      displayReport(data);
     } catch (error) {
       console.error("Analysis failed:", error.message);
       FaceAI.ui.showError(error.message);
