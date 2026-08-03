@@ -131,23 +131,39 @@ FaceAI.capture = (function () {
     const btn = document.getElementById("continue-btn");
     if (!btn) return;
 
-    // Prevent double‑submit
     if (btn.disabled) return;
 
-    // Tampilkan spinner
-    btn.innerHTML = '<span class="spinner"></span> Mengunggah…';
+    btn.innerHTML = '<span class="spinner"></span> Menganalisis…';
     btn.disabled = true;
 
     try {
-      const response = await FaceAI.upload.send(canvas);
-      console.log("Upload successful:", response);
+      // Konversi canvas ke Blob
+      const blob = await new Promise((resolve) =>
+        canvas.toBlob(resolve, "image/jpeg", 0.9),
+      );
+      const formData = new FormData();
+      formData.append("file", blob, "capture.jpg");
+
+      // Panggil fungsi analyze langsung
+      const response = await fetch(FaceAI.config.ANALYZE_URL, {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const err = await response.json();
+        throw new Error(err.error || `Server error: ${response.status}`);
+      }
+
+      const reportData = await response.json();
+      console.log("Analysis successful:", reportData);
       FaceAI.ui.showError("");
       btn.textContent = "Selesai ✓";
+      btn.disabled = true;
       FaceAI.state.set("RESULT_READY");
-      const filename = response.filename;
-      fetchReport(filename);
+      displayReport(reportData);
     } catch (error) {
-      console.error("Upload failed:", error.message);
+      console.error("Analysis failed:", error.message);
       FaceAI.ui.showError(error.message);
       btn.textContent = "Coba Lagi";
       btn.disabled = false;
