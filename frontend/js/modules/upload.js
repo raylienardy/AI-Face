@@ -33,7 +33,7 @@ FaceAI.upload = (function () {
       const formData = new FormData();
       formData.append("file", blob, "capture.jpg");
 
-      const url = FaceAI.config.BACKEND_UPLOAD_URL;
+      const url = "/api/upload"; // bukan absolute URL
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), TIMEOUT_MS);
 

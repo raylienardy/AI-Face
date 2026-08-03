@@ -3,7 +3,6 @@ export const config = {
 };
 
 export default async function handler(req) {
-  // Hanya izinkan POST
   if (req.method !== "POST") {
     return new Response(JSON.stringify({ error: "Method not allowed" }), {
       status: 405,
@@ -15,15 +14,16 @@ export default async function handler(req) {
     const backendUrl =
       process.env.BACKEND_URL || "https://faceai-api.railway.app";
 
-    // Teruskan request ke backend Railway
+    // Ambil body sebagai ArrayBuffer
+    const bodyBuffer = await req.arrayBuffer();
+
     const response = await fetch(`${backendUrl}/api/upload`, {
       method: "POST",
       headers: {
-        // Teruskan content-type
         "Content-Type":
-          req.headers.get("content-type") || "multipart/form-data",
+          req.headers.get("content-type") || "application/octet-stream",
       },
-      body: req.body,
+      body: bodyBuffer,
     });
 
     const data = await response.json();
@@ -36,6 +36,7 @@ export default async function handler(req) {
       },
     });
   } catch (error) {
+    console.error("Upload proxy error:", error);
     return new Response(JSON.stringify({ error: "Upload failed" }), {
       status: 500,
       headers: { "Content-Type": "application/json" },
