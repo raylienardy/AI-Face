@@ -21,6 +21,7 @@ env/
 # Environment Variables
 # -----------------------
 .env
+.railway.env
 
 # -----------------------
 # IDE
