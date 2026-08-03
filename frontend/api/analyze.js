@@ -60,7 +60,9 @@ async function tryGemini(base64Image, mimeType, apiKey) {
 
   if (!response.ok) {
     const errorText = await response.text();
-    throw new Error(`Gemini API error: ${response.status} - ${errorText}`);
+    throw new Error(
+      `Gemini: ${response.status} - ${errorText.substring(0, 200)}`,
+    );
   }
 
   const data = await response.json();
@@ -101,7 +103,9 @@ async function tryGroq(base64Image, mimeType, apiKey) {
 
   if (!response.ok) {
     const errorText = await response.text();
-    throw new Error(`Groq API error: ${response.status} - ${errorText}`);
+    throw new Error(
+      `Groq: ${response.status} - ${errorText.substring(0, 200)}`,
+    );
   }
 
   const data = await response.json();
@@ -143,7 +147,7 @@ export default async function handler(req) {
 
     let result = null;
     let usedProvider = "";
-    const errors = []; // <-- kumpulkan error di sini
+    const errors = [];
 
     // 1. Coba Gemini
     try {
@@ -152,10 +156,10 @@ export default async function handler(req) {
         result = await tryGemini(base64Image, mimeType, geminiKey);
         usedProvider = "gemini";
       } else {
-        errors.push("Gemini API key not set");
+        errors.push("Gemini: API key not set");
       }
     } catch (e) {
-      errors.push(`Gemini: ${e.message}`);
+      errors.push(e.message);
     }
 
     // 2. Fallback ke Groq
@@ -166,15 +170,14 @@ export default async function handler(req) {
           result = await tryGroq(base64Image, mimeType, groqKey);
           usedProvider = "groq";
         } else {
-          errors.push("Groq API key not set");
+          errors.push("Groq: API key not set");
         }
       } catch (e) {
-        errors.push(`Groq: ${e.message}`);
+        errors.push(e.message);
       }
     }
 
     if (!result) {
-      // Kembalikan detail error
       return new Response(
         JSON.stringify({
           error: "Semua AI provider sedang sibuk. Silakan coba lagi nanti.",
