@@ -12,16 +12,26 @@ export default async function handler(req) {
 
   try {
     const backendUrl = process.env.BACKEND_URL;
+
+    // DEBUG: Kembalikan informasi environment
     if (!backendUrl) {
-      // Jika tidak ada environment variable, kita tahu sumber masalahnya
-      return new Response(JSON.stringify({ error: "BACKEND_URL not set" }), {
-        status: 500,
-        headers: { "Content-Type": "application/json" },
-      });
+      return new Response(
+        JSON.stringify({
+          error: "BACKEND_URL not set",
+          env: Object.keys(process.env).filter((k) => k.includes("BACKEND")),
+        }),
+        {
+          status: 500,
+          headers: { "Content-Type": "application/json" },
+        },
+      );
     }
 
     // Ambil body mentah
     const bodyBuffer = await req.arrayBuffer();
+
+    // DEBUG: Cek ukuran body
+    const bodySize = bodyBuffer.byteLength;
 
     const response = await fetch(`${backendUrl}/api/upload`, {
       method: "POST",
@@ -32,19 +42,32 @@ export default async function handler(req) {
       body: bodyBuffer,
     });
 
-    const data = await response.json();
-    return new Response(JSON.stringify(data), {
-      status: response.status,
-      headers: {
-        "Content-Type": "application/json",
-        "Cache-Control": "no-store",
+    const responseText = await response.text();
+
+    // DEBUG: Kembalikan response mentah untuk debugging
+    return new Response(
+      JSON.stringify({
+        status: response.status,
+        backendResponse: responseText,
+        backendUrl: backendUrl,
+        bodySize: bodySize,
+        contentType: req.headers.get("content-type"),
+      }),
+      {
+        status: response.status,
+        headers: { "Content-Type": "application/json" },
       },
-    });
+    );
   } catch (error) {
-    // Kembalikan pesan error apa adanya agar terlihat di frontend
-    return new Response(JSON.stringify({ error: error.message }), {
-      status: 500,
-      headers: { "Content-Type": "application/json" },
-    });
+    return new Response(
+      JSON.stringify({
+        error: error.message,
+        stack: error.stack,
+      }),
+      {
+        status: 500,
+        headers: { "Content-Type": "application/json" },
+      },
+    );
   }
 }
