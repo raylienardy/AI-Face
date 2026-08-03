@@ -25,12 +25,12 @@ class Detector:
         if self._initialized:
             return
         logger.info("Loading InsightFace detection model: %s", config.DETECTION_MODEL_NAME)
-        # InsightFace akan mengunduh model jika belum ada di ~/.insightface
         self.model = insightface.app.FaceAnalysis(
             name=config.DETECTION_MODEL_NAME,
-            providers=['CPUExecutionProvider']  # gunakan CPU; jika ada GPU bisa 'CUDAExecutionProvider'
+            providers=['CPUExecutionProvider'],
+            allowed_modules=['detection', 'recognition', 'landmark_2d_106']  # hanya yang diperlukan
         )
-        ctx_id = -1  # CPU
+        ctx_id = -1
         self.model.prepare(ctx_id=ctx_id)
         self._initialized = True
         logger.info("Detection model loaded successfully")
