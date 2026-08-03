@@ -83,4 +83,6 @@ FaceAI.config = {
   MIRROR_ENABLED: true,
 
   SHOW_BOUNDING_BOX: false, // sebelumnya true
+
+  BACKEND_UPLOAD_URL: "https://faceai-api.railway.app/api/upload",
 };
