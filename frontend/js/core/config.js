@@ -67,7 +67,7 @@ FaceAI.config = {
   MOUTH_VARIANCE_THRESHOLD: 25,
 
   // Backend Upload (Stage 7.2)
-  BACKEND_UPLOAD_URL: "http://localhost:8000/api/upload",
+  BACKEND_UPLOAD_URL: "https://faceai-api.railway.app/api/upload",
 
   // Debug
   DEBUG_MODE: false,

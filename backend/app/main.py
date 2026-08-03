@@ -5,7 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.api import upload, preprocessing, analysis, report, history
 from app.database import init_db
-from app.services.detector import detector   # ← import detector singleton
+from app.services.detector import detector
 
 app = FastAPI(title="FaceAI Backend", version="0.1.0")
 
@@ -15,8 +15,8 @@ app.add_middleware(
     allow_origins=[
         "http://localhost:8080",
         "http://localhost:5500",
-        "https://faceai.vercel.app",     # ganti dengan domain Vercel nanti
-        "https://*.vercel.app"            # semua subdomain vercel
+        "https://ai-face-blush.vercel.app",    # domain Vercel Anda
+        "https://*.vercel.app"                 # semua subdomain Vercel
     ],
     allow_credentials=True,
     allow_methods=["*"],
