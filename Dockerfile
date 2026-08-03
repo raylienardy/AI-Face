@@ -8,10 +8,12 @@ RUN apt-get update && apt-get install -y \
     libglib2.0-0 \
     && rm -rf /var/lib/apt/lists/*
 
-COPY requirements.txt .
+# Copy hanya requirements dulu (caching)
+COPY backend/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY . .
+# Copy seluruh folder backend
+COPY backend/ .
 
 # Railway menyediakan PORT environment variable
 ENV PORT=8000
