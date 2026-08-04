@@ -1,29 +1,17 @@
 /**
  * FaceAI Capture Module
- * Version: 0.2 – Milestone 12 Fase Akhir
- *
- * - takeSnapshot(video) → canvas
- * - State‑driven countdown & auto capture
- * - Upload, report fetching, display
- * - Loading states & micro‑interactions
- * - Rich report with feature scores, progress bars, and dev mode
+ * Version: 0.2 – Final Telkom AI
  */
 "use strict";
 
 FaceAI.capture = (function () {
-  // ==========================================
-  // Private State
-  // ==========================================
   let countdownTimer = null;
   let currentCount = 0;
   let isCountingDown = false;
   let stateWatchInterval = null;
   const COUNTDOWN_SECONDS = 3;
-  let lastCapture = null; // HTMLCanvasElement
+  let lastCapture = null;
 
-  // ==========================================
-  // Countdown Logic (private)
-  // ==========================================
   function startCountdown() {
     if (isCountingDown) return;
     isCountingDown = true;
@@ -67,7 +55,6 @@ FaceAI.capture = (function () {
       return;
     }
 
-    // Wait a little for countdown overlay to disappear
     await new Promise((resolve) => setTimeout(resolve, 100));
 
     const video = FaceAI.ui.getVideoElement();
@@ -86,41 +73,27 @@ FaceAI.capture = (function () {
       canvas.height,
     );
 
-    // Stop detection & camera completely
     FaceAI.detection.stop();
     FaceAI.camera.stop();
-
-    // Hide guidance and camera‑related UI
     FaceAI.ui.showUserGuidance(false);
-    FaceAI.ui.setButtonActive(false); // tombol "Mulai Kamera" kembali normal
-    document.getElementById("start-camera-btn").style.display = "none"; // sembunyikan tombol
+    FaceAI.ui.setButtonActive(false);
+    document.getElementById("start-camera-btn").style.display = "none";
 
-    // Show preview
     const dataURL = FaceAI.capture.toDataURL(canvas);
     FaceAI.ui.showPreview(dataURL);
     FaceAI.ui.showCaptureButtons();
     FaceAI.state.set("CAPTURED");
   }
 
-  // ==========================================
-  // State Monitoring
-  // ==========================================
   function checkState() {
     const state = FaceAI.state.get();
     if (state === "FACE_READY") {
-      if (!isCountingDown) {
-        startCountdown();
-      }
+      if (!isCountingDown) startCountdown();
     } else {
-      if (isCountingDown) {
-        cancelCountdown("state changed to " + state);
-      }
+      if (isCountingDown) cancelCountdown("state changed to " + state);
     }
   }
 
-  // ==========================================
-  // Upload & Report
-  // ==========================================
   async function onContinue() {
     const canvas = FaceAI.capture.getLastCapture();
     if (!canvas) {
@@ -129,8 +102,7 @@ FaceAI.capture = (function () {
     }
 
     const btn = document.getElementById("continue-btn");
-    if (!btn) return;
-    if (btn.disabled) return;
+    if (!btn || btn.disabled) return;
 
     btn.innerHTML = '<span class="spinner"></span> Menganalisis…';
     btn.disabled = true;
@@ -146,7 +118,6 @@ FaceAI.capture = (function () {
         method: "POST",
         body: formData,
       });
-
       const data = await response.json();
 
       if (!response.ok) {
@@ -154,9 +125,9 @@ FaceAI.capture = (function () {
       }
 
       console.log("Analysis successful:", data);
-      FaceAI.ui.showError("");
       btn.textContent = "Selesai ✓";
       btn.disabled = true;
+      FaceAI.ui.showError("");
       FaceAI.state.set("RESULT_READY");
       displayReport(data);
     } catch (error) {
@@ -167,57 +138,27 @@ FaceAI.capture = (function () {
     }
   }
 
-  async function fetchReport(filename) {
-    const container = document.getElementById("report-container");
-    const content = document.getElementById("report-content");
-    if (container && content) {
-      container.style.display = "block";
-      container.classList.remove("visible"); // reset fade
-      content.innerHTML = '<p class="loading-text">Menganalisis…</p>';
-    }
-
-    const reportUrl = `/api/report?file=${filename}`;
-    try {
-      const res = await fetch(reportUrl);
-      if (!res.ok) {
-        throw new Error(`Server error: ${res.status}`);
-      }
-      const reportData = await res.json();
-      displayReport(reportData);
-    } catch (err) {
-      console.error("Failed to fetch report:", err);
-      if (content) {
-        content.innerHTML =
-          '<p class="loading-text">Gagal memuat laporan. Silakan coba lagi.</p>';
-      }
-      FaceAI.ui.showError("Gagal memuat laporan analisis.");
-    }
-  }
-
-  // ==========================================
-  // Report Display
-  // ==========================================
   function displayReport(data) {
     const container = document.getElementById("report-container");
     const content = document.getElementById("report-content");
     if (!container || !content) return;
 
     const isDev = document.body.classList.contains("dev-mode");
-    const score = data.overall_score?.toFixed(1) || "0.0";
-    const confidence = ((data.confidence || 0) * 100).toFixed(0);
+    const score = (data.overall_score ?? 0).toFixed(1);
+    const confidence = ((data.confidence ?? 0) * 100).toFixed(0);
 
     let html = "";
 
     // Overall Score
     html += `
-        <div class="report-overall-simple">
-            <div class="report-overall-score-big">${score}</div>
-            <div class="report-score-bar">
-                <div class="report-score-bar-fill" style="width:${score}%"></div>
-            </div>
-            <div class="report-overall-label">Skor Kecantikan</div>
-            <div class="report-overall-confidence">Keyakinan AI: ${confidence}%</div>
+      <div class="report-overall-simple">
+        <div class="report-overall-score-big">${score}</div>
+        <div class="report-score-bar">
+          <div class="report-score-bar-fill" style="width:${score}%"></div>
         </div>
+        <div class="report-overall-label">Skor Kecantikan</div>
+        <div class="report-overall-confidence">Keyakinan AI: ${confidence}%</div>
+      </div>
     `;
 
     // Feature Scores
@@ -240,17 +181,17 @@ FaceAI.capture = (function () {
         if (featureData) {
           const value = featureData.score || 0;
           html += `
-                    <div class="feature-item">
-                        <div class="feature-header">
-                            <span class="feature-label">${f.label}</span>
-                            <span class="feature-score">${Math.round(value)}/100</span>
-                        </div>
-                        <div class="feature-bar">
-                            <div class="feature-bar-fill" style="width:${value}%"></div>
-                        </div>
-                        <span class="feature-confidence">${featureData.comment || ""}</span>
-                    </div>
-                `;
+            <div class="feature-item">
+              <div class="feature-header">
+                <span class="feature-label">${f.label}</span>
+                <span class="feature-score">${Math.round(value)}/100</span>
+              </div>
+              <div class="feature-bar">
+                <div class="feature-bar-fill" style="width:${value}%"></div>
+              </div>
+              <span class="feature-confidence">${featureData.comment || ""}</span>
+            </div>
+          `;
         }
       });
       html += `</div>`;
@@ -271,74 +212,9 @@ FaceAI.capture = (function () {
     content.innerHTML = html;
     container.classList.add("visible");
     container.style.display = "block";
-
-    // Event untuk toggle detail
-    if (isDev) {
-      document
-        .getElementById("toggle-detail-btn")
-        ?.addEventListener("click", () => {
-          const detailDiv = document.getElementById("detail-content");
-          if (detailDiv.style.display === "none" || !detailDiv.style.display) {
-            detailDiv.innerHTML = generateTechnicalDetail(data);
-            detailDiv.style.display = "block";
-          } else {
-            detailDiv.style.display = "none";
-          }
-        });
-    }
-
-    // Sembunyikan tombol View History jika history dimatikan
-    if (FaceAI.config.ENABLE_HISTORY) {
-      let viewBtn = document.getElementById("view-history-btn");
-      if (!viewBtn) {
-        viewBtn = document.createElement("button");
-        viewBtn.id = "view-history-btn";
-        viewBtn.className = "btn btn--secondary";
-        viewBtn.textContent = "📜 Riwayat";
-        viewBtn.addEventListener("click", () => {
-          document.getElementById("report-container").style.display = "none";
-          FaceAI.history.show();
-        });
-        container.parentNode.insertBefore(viewBtn, container.nextSibling);
-      } else {
-        viewBtn.style.display = "inline-block";
-      }
-    }
   }
 
-  // ==========================================
-  // Helper: Technical Detail (untuk mode developer)
-  // ==========================================
-  function generateTechnicalDetail(data) {
-    let html = '<div style="overflow-x:auto;"><table class="tech-table">';
-    html += "<tr><th>Fitur</th><th>Nilai</th><th>Keyakinan</th></tr>";
-    const features = [
-      { key: "eyes", label: "Mata" },
-      { key: "eyebrows", label: "Alis" },
-      { key: "nose", label: "Hidung" },
-      { key: "lips", label: "Bibir" },
-      { key: "jaw", label: "Garis Rahang" },
-      { key: "skin", label: "Kulit" },
-      { key: "hair", label: "Rambut" },
-      { key: "cheekbones", label: "Tulang Pipi" },
-      { key: "facial_harmony", label: "Harmoni Wajah" },
-      { key: "facial_symmetry", label: "Simetri Wajah" },
-    ];
-    features.forEach((f) => {
-      const fd = data.feature_scores?.[f.key];
-      if (fd) {
-        html += `<tr><td>${f.label}</td><td>${fd.value?.toFixed(1) || "-"}</td><td>${fd.confidence ? (fd.confidence * 100).toFixed(0) + "%" : "-"}</td></tr>`;
-      }
-    });
-    html += "</table></div>";
-    return html;
-  }
-
-  // ==========================================
-  // Retake
-  // ==========================================
   function onRetake() {
-    // Reset tombol Continue
     document.getElementById("start-camera-btn").style.display = "block";
     const continueBtn = document.getElementById("continue-btn");
     if (continueBtn) {
@@ -348,22 +224,15 @@ FaceAI.capture = (function () {
 
     FaceAI.ui.hidePreview();
     const previewImg = document.getElementById("capture-preview");
-    if (previewImg) {
-      previewImg.removeAttribute("src");
-    }
+    if (previewImg) previewImg.removeAttribute("src");
     FaceAI.ui.hideCaptureButtons();
 
-    // Sembunyikan report dan history
     const reportContainer = document.getElementById("report-container");
     if (reportContainer) {
       reportContainer.style.display = "none";
       reportContainer.classList.remove("visible");
     }
-    const viewBtn = document.getElementById("view-history-btn");
-    if (viewBtn) viewBtn.style.display = "none";
-    FaceAI.history.hide();
 
-    // Tampilkan tombol kamera kembali
     const startBtn = document.getElementById("start-camera-btn");
     if (startBtn) {
       startBtn.style.display = "block";
@@ -373,7 +242,6 @@ FaceAI.capture = (function () {
 
     lastCapture = null;
 
-    // Mulai ulang kamera → deteksi akan otomatis berjalan setelah kamera siap
     FaceAI.camera.start().then(() => {
       const video = FaceAI.ui.getVideoElement();
       FaceAI.detection.start(video);
@@ -383,31 +251,20 @@ FaceAI.capture = (function () {
     FaceAI.state.set("CAMERA_READY");
   }
 
-  // ==========================================
-  // Button Binding
-  // ==========================================
   function bindButtons() {
-    const retakeBtn = document.getElementById("retake-btn");
-    const continueBtn = document.getElementById("continue-btn");
-    if (continueBtn) {
-      continueBtn.textContent = "Analisa";
-      continueBtn.disabled = false;
-    }
-    if (retakeBtn) retakeBtn.addEventListener("click", onRetake);
-    if (continueBtn) continueBtn.addEventListener("click", onContinue);
+    document.getElementById("retake-btn")?.addEventListener("click", onRetake);
+    document
+      .getElementById("continue-btn")
+      ?.addEventListener("click", onContinue);
   }
 
-  // ==========================================
-  // Public API
-  // ==========================================
   return {
     init() {
       if (stateWatchInterval) return;
       stateWatchInterval = setInterval(checkState, 200);
       bindButtons();
-      console.log("Capture module initialized (Stage 12 final)");
+      console.log("Capture module initialized");
     },
-
     destroy() {
       if (stateWatchInterval) {
         clearInterval(stateWatchInterval);
@@ -415,41 +272,24 @@ FaceAI.capture = (function () {
       }
       cancelCountdown("module destroyed");
     },
-
     takeSnapshot(video) {
-      if (!video) {
-        console.warn("FaceAI.capture: no video element");
-        return null;
-      }
-      const vw = video.videoWidth;
-      const vh = video.videoHeight;
-      if (!vw || !vh) {
-        console.warn("FaceAI.capture: video has zero dimensions");
-        return null;
-      }
+      if (!video) return null;
+      const vw = video.videoWidth,
+        vh = video.videoHeight;
+      if (!vw || !vh) return null;
       try {
         const canvas = document.createElement("canvas");
         canvas.width = vw;
         canvas.height = vh;
-        const ctx = canvas.getContext("2d");
-        ctx.drawImage(video, 0, 0, vw, vh);
+        canvas.getContext("2d").drawImage(video, 0, 0, vw, vh);
         return canvas;
-      } catch (error) {
-        console.error("FaceAI.capture: snapshot failed", error);
+      } catch (e) {
         return null;
       }
     },
-
     toDataURL(canvas) {
-      if (!canvas) return null;
-      try {
-        return canvas.toDataURL("image/png");
-      } catch (error) {
-        console.error("FaceAI.capture: toDataURL failed", error);
-        return null;
-      }
+      return canvas?.toDataURL("image/png") ?? null;
     },
-
     getLastCapture() {
       return lastCapture;
     },
