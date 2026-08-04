@@ -150,12 +150,7 @@ FaceAI.capture = (function () {
       const data = await response.json();
 
       if (!response.ok) {
-        // Tampilkan error + debug
-        let errorMsg = data.error || "Unknown error";
-        if (data.debug && Array.isArray(data.debug)) {
-          errorMsg += "\n" + data.debug.join("\n");
-        }
-        throw new Error(errorMsg);
+        throw new Error(data.error || "Server error");
       }
 
       console.log("Analysis successful:", data);

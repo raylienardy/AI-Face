@@ -15,13 +15,11 @@ FaceAI.config = {
   CAMERA_HEIGHT: 720,
   CAMERA_FACING_MODE: "user",
 
-  // Detection – Stage 4.1
+  // Detection
   DETECTION_MODEL_TYPE: "short",
   DETECTION_MODEL_URL:
     "https://cdn.jsdelivr.net/npm/@mediapipe/face_detection@0.4.1646425229/",
   DETECTION_THRESHOLD: 0.5,
-
-  // Detection output (Stage 5.1)
   DETECTION_OUTPUT_LANDMARKS: true,
 
   // Capture
@@ -31,64 +29,48 @@ FaceAI.config = {
   // UI / Drawing
   BOX_COLOR: "#22c55e",
   BOX_LINE_WIDTH: 3,
-  FPS_LIMIT: 20, // <-- diubah dari 30 menjadi 20
+  FPS_LIMIT: 20,
+  SHOW_BOUNDING_BOX: false,
 
-  // Multi-face selection (Stage 4.4)
+  // Multi-face selection
   PRIMARY_FACE_CRITERIA: "area",
   SECONDARY_BOX_COLOR: "#9ca3af",
   SECONDARY_BOX_LINE_WIDTH: 2,
 
-  // Quality Check – Position & Size (Stage 5.2)
+  // Quality Check – Position & Size
   CENTER_TOLERANCE: 0.15,
   MIN_FACE_HEIGHT_RATIO: 0.3,
   MAX_FACE_HEIGHT_RATIO: 0.7,
 
-  // Quality Check – Lighting (Stage 5.3)
+  // Quality Check – Lighting
   MIN_BRIGHTNESS: 40,
   MAX_BRIGHTNESS: 220,
 
-  // Quality Check – Blur (Stage 5.4)
+  // Quality Check – Blur
   BLUR_THRESHOLD: 100,
   BLUR_SAMPLE_WIDTH: 100,
 
-  // Quality Check – Stability (Stage 5.5)
+  // Quality Check – Stability
   STABILITY_FRAME_COUNT: 10,
   STABILITY_MOVEMENT_THRESHOLD: 0.05,
 
-  // Alignment (Stage 4.5)
+  // Alignment
   ALIGN_ENABLED: true,
   ALIGN_TARGET_SIZE: 150,
   ALIGN_EYE_POSITION_RATIO: 0.35,
 
-  // Visibility (Stage 5.6)
+  // Visibility
   EYE_PATCH_SIZE: 20,
   MOUTH_PATCH_SIZE: 20,
   EYE_VARIANCE_THRESHOLD: 25,
   MOUTH_VARIANCE_THRESHOLD: 25,
 
-  // Backend Upload (Stage 7.2)
-  // BACKEND_UPLOAD_URL: "https://faceai-api.railway.app/api/upload",
-  ANALYZE_URL: "/api/analyze",
+  // History (dinonaktifkan)
+  ENABLE_HISTORY: false,
 
-  // Debug
+  // Developer
   DEBUG_MODE: false,
 
   // i18n
   DEFAULT_LANGUAGE: "en",
-
-  // UI Config (Fase 12.11)
-  SHOW_BOUNDING_BOX: true, // dapat dimatikan untuk tampilan lebih bersih
-
-  // Camera preferences (Fase 12.13-14)
-  SELECTED_CAMERA_ID: null, // null = default
-  MIRROR_ENABLED: true,
-
-  SHOW_BOUNDING_BOX: false, // sebelumnya true
-
-  BACKEND_UPLOAD_URL: "https://faceai-api.railway.app/api/upload",
-
-  // Ubah URL backend menjadi endpoint proxy Vercel
-  BACKEND_UPLOAD_URL: "/api/upload",
-  BACKEND_REPORT_URL: "/api/report",
-  BACKEND_HISTORY_URL: "/api/history",
 };
