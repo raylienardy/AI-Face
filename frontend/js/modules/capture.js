@@ -198,37 +198,29 @@ FaceAI.capture = (function () {
   // Report Display
   // ==========================================
   function displayReport(data) {
-    // Sembunyikan tombol Mulai Kamera
-    FaceAI.ui.showUserGuidance(false);
-    document.getElementById("start-camera-btn").style.display = "none";
-
     const container = document.getElementById("report-container");
     const content = document.getElementById("report-content");
     if (!container || !content) return;
 
     const isDev = document.body.classList.contains("dev-mode");
-    const score = data.overall.value.toFixed(1);
-    const confidence = (data.overall.confidence * 100).toFixed(0);
+    const score = data.overall_score?.toFixed(1) || "0.0";
+    const confidence = ((data.confidence || 0) * 100).toFixed(0);
 
     let html = "";
 
-    // ==========================================
-    // 1. Overall Score (selalu muncul)
-    // ==========================================
+    // Overall Score
     html += `
-      <div class="report-overall-simple">
-        <div class="report-overall-score-big">${score}</div>
-        <div class="report-score-bar">
-          <div class="report-score-bar-fill" style="width:${score}%"></div>
+        <div class="report-overall-simple">
+            <div class="report-overall-score-big">${score}</div>
+            <div class="report-score-bar">
+                <div class="report-score-bar-fill" style="width:${score}%"></div>
+            </div>
+            <div class="report-overall-label">Skor Kecantikan</div>
+            <div class="report-overall-confidence">Keyakinan AI: ${confidence}%</div>
         </div>
-        <div class="report-overall-label">Skor Kecantikan</div>
-        <div class="report-overall-confidence">Keyakinan AI: ${confidence}%</div>
-      </div>
     `;
 
-    // ==========================================
-    // 2. Feature Scores Grid (selalu muncul)
-    // ==========================================
+    // Feature Scores
     if (data.feature_scores) {
       html += `<div class="report-features-grid">`;
       const features = [
@@ -246,54 +238,34 @@ FaceAI.capture = (function () {
       features.forEach((f) => {
         const featureData = data.feature_scores[f.key];
         if (featureData) {
-          const value = featureData.value || 0;
-          const conf = featureData.confidence
-            ? Math.round(featureData.confidence * 100)
-            : null;
-          const confText = conf
-            ? `<span class="feature-confidence">${conf}% yakin</span>`
-            : "";
+          const value = featureData.score || 0;
           html += `
-            <div class="feature-item">
-              <div class="feature-header">
-                <span class="feature-label">${f.label}</span>
-                <span class="feature-score">${Math.round(value)}/100</span>
-              </div>
-              <div class="feature-bar">
-                <div class="feature-bar-fill" style="width:${value}%"></div>
-              </div>
-              ${confText}
-            </div>
-          `;
+                    <div class="feature-item">
+                        <div class="feature-header">
+                            <span class="feature-label">${f.label}</span>
+                            <span class="feature-score">${Math.round(value)}/100</span>
+                        </div>
+                        <div class="feature-bar">
+                            <div class="feature-bar-fill" style="width:${value}%"></div>
+                        </div>
+                        <span class="feature-confidence">${featureData.comment || ""}</span>
+                    </div>
+                `;
         }
       });
       html += `</div>`;
     }
 
-    // ==========================================
-    // 3. Strengths & Suggestions (selalu muncul)
-    // ==========================================
-    if (data.strengths && data.strengths.length > 0) {
+    // Strengths & Suggestions
+    if (data.strengths?.length) {
       html += `<div class="report-strengths"><strong>💪 Kelebihan</strong><ul>`;
       data.strengths.forEach((s) => (html += `<li>${s}</li>`));
       html += `</ul></div>`;
     }
-    if (data.suggestions && data.suggestions.length > 0) {
+    if (data.suggestions?.length) {
       html += `<div class="report-suggestions"><strong>💡 Saran Peningkatan</strong><ul>`;
       data.suggestions.forEach((s) => (html += `<li>${s}</li>`));
       html += `</ul></div>`;
-    }
-
-    // ==========================================
-    // 4. Mode Developer: toggle detail teknis
-    // ==========================================
-    if (isDev) {
-      html += `
-        <div class="report-detail-toggle" style="margin-top:1rem;">
-          <button id="toggle-detail-btn" class="btn btn--small">📋 Detail Teknis</button>
-          <div id="detail-content" style="display:none;"></div>
-        </div>
-      `;
     }
 
     content.innerHTML = html;
