@@ -1,5 +1,7 @@
+// api/analyze.js
 export const config = {
   runtime: "edge",
+  maxDuration: 120, // timeout 2 menit untuk 5 percobaan
 };
 
 const PROMPT = `Kamu adalah AI penilai kecantikan wajah yang objektif, profesional, dan etis.
@@ -34,53 +36,17 @@ Format output HARUS JSON dengan struktur berikut:
 
 JANGAN mengembalikan apa pun selain JSON yang valid.`;
 
-async function tryGemini(base64Image, mimeType, apiKey) {
+async function tryApiKey(base64Image, mimeType, apiKey, keyIndex) {
   const response = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        contents: [
-          {
-            parts: [
-              { text: PROMPT },
-              {
-                inline_data: {
-                  mime_type: mimeType || "image/jpeg",
-                  data: base64Image,
-                },
-              },
-            ],
-          },
-        ],
-      }),
-    },
-  );
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(
-      `Gemini: ${response.status} - ${errorText.substring(0, 200)}`,
-    );
-  }
-
-  const data = await response.json();
-  const text = data.candidates[0].content.parts[0].text;
-  return cleanJson(text);
-}
-
-async function tryGroq(base64Image, mimeType, apiKey) {
-  const response = await fetch(
-    "https://api.groq.com/openai/v1/chat/completions",
+    "https://telkom-ai-dag.api.apilogy.id/LargeMultimodalModel/0.0.2/lmm/chat/completions",
     {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${apiKey}`,
         "Content-Type": "application/json",
+        "x-api-key": apiKey,
       },
       body: JSON.stringify({
-        model: "llama-3.3-70b-versatile",
+        model: "telkom-ai-vision-instruct",
         messages: [
           {
             role: "user",
@@ -103,14 +69,22 @@ async function tryGroq(base64Image, mimeType, apiKey) {
 
   if (!response.ok) {
     const errorText = await response.text();
+    if (response.status === 429) {
+      throw new Error(`RATE_LIMITED`);
+    }
     throw new Error(
-      `Groq: ${response.status} - ${errorText.substring(0, 200)}`,
+      `API Error (key ${keyIndex}): ${response.status} - ${errorText.substring(0, 100)}`,
     );
   }
 
   const data = await response.json();
-  const text = data.choices[0].message.content;
-  return cleanJson(text);
+  // Coba beberapa kemungkinan lokasi hasil
+  const content =
+    data.choices?.[0]?.message?.content ||
+    data.message?.content ||
+    data.response;
+  if (!content) throw new Error("Unexpected response format");
+  return content;
 }
 
 function cleanJson(text) {
@@ -133,7 +107,6 @@ export default async function handler(req) {
   try {
     const formData = await req.formData();
     const file = formData.get("file");
-
     if (!file) {
       return new Response(JSON.stringify({ error: "No file provided" }), {
         status: 400,
@@ -145,43 +118,45 @@ export default async function handler(req) {
     const base64Image = Buffer.from(arrayBuffer).toString("base64");
     const mimeType = file.type || "image/jpeg";
 
-    let result = null;
-    let usedProvider = "";
-    const errors = [];
+    const apiKeys = [
+      process.env.TELKOM_API_KEY_1,
+      process.env.TELKOM_API_KEY_2,
+      process.env.TELKOM_API_KEY_3,
+      process.env.TELKOM_API_KEY_4,
+      process.env.TELKOM_API_KEY_5,
+    ].filter(Boolean);
 
-    // 1. Coba Gemini
-    try {
-      const geminiKey = process.env.GEMINI_API_KEY;
-      if (geminiKey) {
-        result = await tryGemini(base64Image, mimeType, geminiKey);
-        usedProvider = "gemini";
-      } else {
-        errors.push("Gemini: API key not set");
-      }
-    } catch (e) {
-      errors.push(e.message);
+    if (apiKeys.length === 0) {
+      return new Response(JSON.stringify({ error: "No API keys configured" }), {
+        status: 500,
+        headers: { "Content-Type": "application/json" },
+      });
     }
 
-    // 2. Fallback ke Groq
-    if (!result) {
+    let result = null;
+    let usedKey = -1;
+
+    for (let i = 0; i < apiKeys.length; i++) {
       try {
-        const groqKey = process.env.GROQ_API_KEY;
-        if (groqKey) {
-          result = await tryGroq(base64Image, mimeType, groqKey);
-          usedProvider = "groq";
-        } else {
-          errors.push("Groq: API key not set");
-        }
+        const rawResult = await tryApiKey(
+          base64Image,
+          mimeType,
+          apiKeys[i],
+          i + 1,
+        );
+        result = cleanJson(rawResult);
+        usedKey = i + 1;
+        break;
       } catch (e) {
-        errors.push(e.message);
+        console.error(`Key ${i + 1} failed:`, e.message);
+        // Lanjut ke key berikutnya
       }
     }
 
     if (!result) {
       return new Response(
         JSON.stringify({
-          error: "Semua AI provider sedang sibuk. Silakan coba lagi nanti.",
-          debug: errors,
+          error: "Semua API key sedang sibuk. Silakan coba lagi nanti.",
         }),
         {
           status: 503,
@@ -190,12 +165,13 @@ export default async function handler(req) {
       );
     }
 
-    result.provider = usedProvider;
+    result.provider = `telkom-ai-key-${usedKey}`;
     return new Response(JSON.stringify(result), {
       status: 200,
       headers: { "Content-Type": "application/json" },
     });
   } catch (error) {
+    console.error("Analyze error:", error);
     return new Response(JSON.stringify({ error: error.message }), {
       status: 500,
       headers: { "Content-Type": "application/json" },
